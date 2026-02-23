@@ -40,6 +40,11 @@ const I18N = {
     msgAutoSaved: "Auto-saved",
     msgChecking: "Checking...",
     msgHandleRequired: "Enter nickname first.",
+    msgHandleValid: "Valid nickname: {handle}",
+    msgHandleNotFound: "Nickname does not exist.",
+    msgHandleNetwork: "Network error occurred.",
+    msgHandleRateLimited: "API rate limit reached. Please try again later.",
+    msgHandleUnknown: "Failed to validate nickname.",
     msgResetTodayConfirm:
       "Reset Today: today problem, reroll count, solved status, and last check time will reset. Continue?",
     msgFactoryConfirm:
@@ -184,6 +189,25 @@ function normalizeTheme(theme) {
 
 function applyTheme(theme) {
   document.documentElement.setAttribute("data-theme", normalizeTheme(theme));
+}
+
+function formatTemplate(message, values = {}) {
+  return Object.entries(values).reduce((out, [key, value]) => out.replace(`{${key}}`, String(value ?? "")), message);
+}
+
+function getHandleValidationErrorMessage(locale, errorCode) {
+  const isKo = locale === "ko";
+  if (errorCode === "not_found") return isKo ? "존재하지 않는 닉네임입니다." : t(locale, "msgHandleNotFound");
+  if (errorCode === "rate_limited") return isKo ? "API 요청 제한 중입니다." : t(locale, "msgHandleRateLimited");
+  if (errorCode === "offline_or_cors" || errorCode === "timeout") {
+    return isKo ? "네트워크 오류가 발생했습니다." : t(locale, "msgHandleNetwork");
+  }
+  return t(locale, "msgHandleUnknown");
+}
+
+function getHandleValidationSuccessMessage(locale, handle) {
+  if (locale === "ko") return `유효한 닉네임입니다: ${handle}`;
+  return formatTemplate(t(locale, "msgHandleValid"), { handle });
 }
 
 async function send(type, extra = {}) {
@@ -462,10 +486,10 @@ els.btnValidateHandle.addEventListener("click", async () => {
   els.handleCheckMsg.textContent = t(locale, "msgChecking");
   const res = await send("VALIDATE_HANDLE", { handle });
   if (!res?.ok) {
-    els.handleCheckMsg.textContent = `Invalid: ${res?.error || "unknown"}`;
+    els.handleCheckMsg.textContent = getHandleValidationErrorMessage(locale, String(res?.error || ""));
     return;
   }
-  els.handleCheckMsg.textContent = `OK: ${res.user?.handle || handle}`;
+  els.handleCheckMsg.textContent = getHandleValidationSuccessMessage(locale, res.user?.handle || handle);
 });
 
 load().catch((err) => {
