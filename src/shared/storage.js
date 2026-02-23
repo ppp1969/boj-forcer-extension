@@ -275,9 +275,10 @@ export function computeStats(dailyState, todayDateKST) {
   if (dailyState.solved && todayDateKST) {
     doneSet.add(todayDateKST);
   }
+  const solvedToday = Boolean(todayDateKST) && doneSet.has(todayDateKST);
 
   let streak = 0;
-  const start = dailyState.solved ? todayDateKST : addDaysKST(todayDateKST, -1);
+  const start = solvedToday ? todayDateKST : addDaysKST(todayDateKST, -1);
   let cursor = start;
   while (cursor && doneSet.has(cursor)) {
     streak += 1;
