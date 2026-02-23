@@ -196,10 +196,18 @@ function formatTemplate(message, values = {}) {
 }
 
 function getHandleValidationErrorMessage(locale, errorCode) {
-  if (errorCode === "not_found") return t(locale, "msgHandleNotFound");
-  if (errorCode === "rate_limited") return t(locale, "msgHandleRateLimited");
-  if (errorCode === "offline_or_cors" || errorCode === "timeout") return t(locale, "msgHandleNetwork");
+  const isKo = locale === "ko";
+  if (errorCode === "not_found") return isKo ? "존재하지 않는 닉네임입니다." : t(locale, "msgHandleNotFound");
+  if (errorCode === "rate_limited") return isKo ? "API 요청 제한 중입니다." : t(locale, "msgHandleRateLimited");
+  if (errorCode === "offline_or_cors" || errorCode === "timeout") {
+    return isKo ? "네트워크 오류가 발생했습니다." : t(locale, "msgHandleNetwork");
+  }
   return t(locale, "msgHandleUnknown");
+}
+
+function getHandleValidationSuccessMessage(locale, handle) {
+  if (locale === "ko") return `유효한 닉네임입니다: ${handle}`;
+  return formatTemplate(t(locale, "msgHandleValid"), { handle });
 }
 
 async function send(type, extra = {}) {
@@ -481,7 +489,7 @@ els.btnValidateHandle.addEventListener("click", async () => {
     els.handleCheckMsg.textContent = getHandleValidationErrorMessage(locale, String(res?.error || ""));
     return;
   }
-  els.handleCheckMsg.textContent = formatTemplate(t(locale, "msgHandleValid"), { handle: res.user?.handle || handle });
+  els.handleCheckMsg.textContent = getHandleValidationSuccessMessage(locale, res.user?.handle || handle);
 });
 
 load().catch((err) => {
