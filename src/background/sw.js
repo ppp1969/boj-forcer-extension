@@ -117,10 +117,12 @@ async function pickProblem(settings, dateKST, rerollUsed) {
 function createFreshDaily(dateKST, prev) {
   let history = Array.isArray(prev?.history) ? prev.history : [];
   if (prev?.dateKST && prev?.todayProblemId > 0) {
+    const existing = history.find((row) => row?.dateKST === prev.dateKST);
+    const keepExistingDone = Boolean(existing?.done) && Number(existing?.problemId || 0) > 0;
     history = upsertHistory(history, {
       dateKST: prev.dateKST,
-      problemId: prev.todayProblemId,
-      done: Boolean(prev.solved)
+      problemId: keepExistingDone ? Number(existing.problemId) : prev.todayProblemId,
+      done: keepExistingDone || Boolean(prev.solved)
     });
   }
   return normalizeDailyState({
@@ -226,6 +228,11 @@ async function performSolvedCheck(trigger = "manual") {
     daily.lastSolvedCheckAt = now();
     if (solved) {
       daily.solved = true;
+      daily.history = upsertHistory(daily.history, {
+        dateKST: todayDateKST,
+        problemId: daily.todayProblemId,
+        done: true
+      });
       daily.lastApiError = "";
       recomputeStreak(daily, todayDateKST);
       await setDailyState(daily);
@@ -264,7 +271,6 @@ async function rerollToday() {
   if (!settings.handle) throw new Error("missing_handle");
   if (daily.rerollUsed >= settings.rerollLimitPerDay) throw new Error("reroll_limit");
   daily.rerollUsed += 1;
-  daily.solved = false;
 
   const picked = await pickProblem(settings, todayDateKST, daily.rerollUsed);
   daily.todayProblemId = picked.problemId;
