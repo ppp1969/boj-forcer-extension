@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BOJ Forcer Settings</title>
+    <link rel="stylesheet" href="../styles/styles.css" />
+  </head>
+  <body>
+    <main class="container" style="max-width: 920px; margin: 0 auto">
+      <section class="card section">
+        <div class="row">
+          <p id="optTitle" class="h1">BOJ Forcer Settings</p>
+        </div>
+        <label id="lblUiLanguage" class="label" for="uiLanguage">Language</label>
+        <select id="uiLanguage" class="field">
+          <option value="en">English</option>
+          <option value="ko">한국어</option>
+        </select>
+        <label id="lblTheme" class="label" for="theme">Theme</label>
+        <select id="theme" class="field">
+          <option id="optThemeVivid" value="vivid">Vivid</option>
+          <option id="optThemeDark" value="dark">Dark</option>
+          <option id="optThemeLight" value="light">Light</option>
+        </select>
+      </section>
+
+      <section class="card section">
+        <p id="secAccount" class="h2">Account</p>
+        <label id="lblHandle" class="label" for="handle">Nickname (solved.ac handle)</label>
+        <div class="row">
+          <input id="handle" class="field mono" placeholder="your_nickname" />
+          <button id="btnValidateHandle" class="btn" style="max-width: 180px">Check</button>
+        </div>
+        <p id="handleCheckMsg" class="hint"></p>
+      </section>
+
+      <section class="card section">
+        <p id="secFilter" class="h2">Problem Filter</p>
+        <div class="row">
+          <div class="col" style="flex: 1">
+            <label id="lblLevelMin" class="label" for="levelMin">Min Tier</label>
+            <select id="levelMin" class="field"></select>
+          </div>
+          <div class="col" style="flex: 1">
+            <label id="lblLevelMax" class="label" for="levelMax">Max Tier</label>
+            <select id="levelMax" class="field"></select>
+          </div>
+        </div>
+        <div class="toggleRow">
+          <label id="lblLangKo" class="label">Language KO</label>
+          <input id="langKo" type="checkbox" />
+        </div>
+        <div class="toggleRow">
+          <label id="lblLangEn" class="label">Language EN</label>
+          <input id="langEn" type="checkbox" />
+        </div>
+        <div class="toggleRow">
+          <label id="lblReqSolvable" class="label">Require Solvable (o?true)</label>
+          <input id="requireSolvable" type="checkbox" />
+        </div>
+        <p id="hintReqSolvable" class="hint"></p>
+        <div class="toggleRow">
+          <label id="lblExcludeWarnings" class="label">Exclude Warnings (w?false)</label>
+          <input id="excludeWarnings" type="checkbox" />
+        </div>
+        <p id="hintExcludeWarnings" class="hint"></p>
+        <label id="lblMinSolvedCount" class="label" for="minSolvedCount">Min Solved Count</label>
+        <input id="minSolvedCount" class="field mono" type="number" min="1" step="1" />
+
+        <p id="lblTags" class="label">Problem Tags</p>
+        <p id="hintTags" class="hint"></p>
+        <div id="tagList" class="tagGrid"></div>
+      </section>
+
+      <section class="card section">
+        <p id="secWhitelist" class="h2">Whitelist</p>
+        <label id="lblWhitelist" class="label" for="whitelist">Domain List</label>
+        <textarea id="whitelist" class="field mono" rows="4"></textarea>
+      </section>
+
+      <section class="card section">
+        <p id="secLimits" class="h2">Limits</p>
+        <div class="row">
+          <div class="col" style="flex: 1">
+            <label id="lblRerollLimit" class="label" for="rerollLimitPerDay">Reroll Per Day</label>
+            <input id="rerollLimitPerDay" class="field mono" type="number" min="0" max="20" />
+          </div>
+          <div class="col" style="flex: 1">
+            <label id="lblEmergencyHours" class="label" for="emergencyHours">Emergency Hours</label>
+            <input id="emergencyHours" class="field mono" type="number" min="1" max="24" />
+          </div>
+        </div>
+        <div class="toggleRow">
+          <label id="lblAutoRecheck" class="label">Auto Re-check</label>
+          <input id="autoRecheck" type="checkbox" />
+        </div>
+      </section>
+
+      <section class="card section">
+        <p id="secDebug" class="h2">Debug</p>
+        <div class="toggleRow">
+          <label id="lblDebugMode" class="label">Debug Mode</label>
+          <input id="debugMode" type="checkbox" />
+        </div>
+        <p id="hintDebugMode" class="hint"></p>
+        <label id="lblDebugDate" class="label" for="debugDateKST">Debug Date (YYYY-MM-DD)</label>
+        <input id="debugDateKST" class="field mono" placeholder="2026-02-21" />
+        <div class="btnRow">
+          <button id="btnResetToday" class="btn">Reset Today</button>
+          <button id="btnFactoryReset" class="btn dangerBtn">Factory Reset</button>
+        </div>
+      </section>
+
+      <section class="section">
+        <p id="saveMsg" class="hint">Auto-saved</p>
+      </section>
+    </main>
+
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

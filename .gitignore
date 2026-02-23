@@ -1,0 +1,12 @@
+﻿# Dependency / build artifacts
+*.zip
+
+# Editor
+.vscode/
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
+.DS_Store

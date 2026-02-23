@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BOJ Forcer</title>
+    <link rel="stylesheet" href="../styles/styles.css" />
+  </head>
+  <body class="popupBody">
+    <main class="container popupRoot compactPopup">
+      <section class="card section compactSection">
+        <div class="row" style="justify-content: space-between">
+          <p id="txtTitle" class="h1">BOJ Forcer</p>
+          <span id="statusBadge" class="badge warn">PENDING</span>
+        </div>
+
+        <div id="nicknameBanner" class="alertBanner" hidden></div>
+
+        <div class="row" style="align-items: center">
+          <a id="problemLink" class="h1 mono" href="#" target="_blank" rel="noreferrer">-</a>
+          <p id="problemTitle" class="p truncate"></p>
+        </div>
+        <p id="problemMeta" class="hint"></p>
+        <button id="btnOpenToday" class="btn">Open Problem</button>
+
+        <div class="row" style="justify-content: space-between">
+          <p id="txtRerollRemaining" class="h2">Reroll Remaining</p>
+          <p id="rerollCount" class="h2 mono">0 / 0</p>
+        </div>
+        <div class="progress">
+          <div id="rerollBar" class="progressFill"></div>
+        </div>
+
+        <div class="btnRow compactRow">
+          <button id="btnReroll" class="btn">Reroll</button>
+          <button id="btnRecheck" class="btn">Re-check</button>
+        </div>
+
+        <button id="btnEmergencyToggle" class="btn emergencyBtn">Emergency</button>
+
+        <div class="inlineStat compactStat">
+          <div class="stat">
+            <div id="txtStreak" class="k">Streak</div>
+            <div id="statStreak" class="v">0</div>
+          </div>
+          <div class="stat">
+            <div id="txtTotal" class="k">Total</div>
+            <div id="statTotal" class="v">0</div>
+          </div>
+          <div class="stat">
+            <div id="txtRate" class="k">30d</div>
+            <div id="statRate" class="v">0%</div>
+          </div>
+        </div>
+
+        <p id="lastCheckText" class="hint">Last check: -</p>
+        <p id="errorText" class="hint"></p>
+        <button id="btnOptions" class="btn">Settings</button>
+      </section>
+    </main>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
