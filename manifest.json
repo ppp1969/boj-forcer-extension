@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BOJ Forcer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Force yourself to solve one BOJ problem daily before browsing freely.",
   "permissions": ["storage", "tabs"],
   "host_permissions": ["https://solved.ac/*", "https://www.acmicpc.net/*"],
