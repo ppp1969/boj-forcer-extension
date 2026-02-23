@@ -1,0 +1,90 @@
+﻿name: "Feature Request"
+description: "기능 제안 (외부 기여자 포함)"
+title: "[FEAT] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        기능 제안 감사합니다.
+        팀원이 아니어도 누구나 제안할 수 있습니다.
+        문제 정의와 성공 기준이 명확할수록 우선순위 판단이 쉬워집니다.
+
+  - type: input
+    id: summary
+    attributes:
+      label: 제안 요약
+      placeholder: 어떤 기능을 추가/변경하고 싶은지 한 줄 요약
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 해결하려는 문제
+      description: 현재의 불편/한계를 구체적으로 작성해 주세요.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 제안 내용
+      description: 원하는 동작을 구체적으로 작성해 주세요.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 제안 우선순위
+      options:
+        - "P1 - 높음"
+        - "P2 - 보통"
+        - "P3 - 낮음"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: 영향 범위
+      options:
+        - "popup"
+        - "options"
+        - "background/service worker"
+        - "redirect/locking logic"
+        - "storage/state"
+        - "docs"
+        - "기타"
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 완료 기준 (Acceptance Criteria)
+      description: 구현 완료를 판단할 체크리스트를 작성해 주세요.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 대안
+      placeholder: 고려한 다른 방법이 있다면 작성
+
+  - type: textarea
+    id: risk
+    attributes:
+      label: 예상 리스크
+      placeholder: 기존 동작 영향, 마이그레이션 필요성, 사이드이펙트 등
+
+  - type: textarea
+    id: references
+    attributes:
+      label: 참고 자료
+      placeholder: 관련 링크, 디자인 시안, 유사 사례
