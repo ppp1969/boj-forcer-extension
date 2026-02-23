@@ -20,6 +20,8 @@ const DEBUG_REDIRECT_COOLDOWN_MS = 350;
 const MAX_AUTO_RECHECK = 6;
 const AUTO_RECHECK_DELAYS_MS = [10000, 30000, 60000, 300000, 600000, 1800000];
 const DEBUG_AUTO_RECHECK_DELAYS_MS = [2000, 4000, 8000, 12000, 20000, 30000];
+const CANDIDATE_POOL_PAGE_COUNT = 5;
+const CANDIDATE_POOL_TTL_MS = 6 * 60 * 60 * 1000;
 
 let ensureDailyLock = null;
 let recheckInFlight = false;
@@ -92,11 +94,98 @@ function recomputeStreak(dailyState, todayDateKST) {
   if (dailyState.solved) dailyState.lastDoneDateKST = todayDateKST;
 }
 
-async function pickProblem(settings, dateKST, rerollUsed) {
+function buildCandidatePoolKey(query) {
+  return `${query}::p${CANDIDATE_POOL_PAGE_COUNT}`;
+}
+
+function isCandidatePoolUsable(dailyState, poolKey) {
+  if (String(dailyState.candidatePoolKey || "") !== poolKey) return false;
+  const pool = Array.isArray(dailyState.candidatePool) ? dailyState.candidatePool : [];
+  if (!pool.length) return false;
+  const updatedAt = Number(dailyState.candidatePoolUpdatedAt || 0);
+  if (!Number.isFinite(updatedAt) || updatedAt <= 0) return false;
+  return now() - updatedAt <= CANDIDATE_POOL_TTL_MS;
+}
+
+async function fetchCandidatePool(query) {
+  const merged = [];
+  const seen = new Set();
+  let lastError = null;
+
+  for (let page = 1; page <= CANDIDATE_POOL_PAGE_COUNT; page += 1) {
+    try {
+      const response = await searchProblem(query, page);
+      const pageCandidates = extractProblemCandidates(response);
+      if (!pageCandidates.length) break;
+      for (const item of pageCandidates) {
+        if (seen.has(item.problemId)) continue;
+        seen.add(item.problemId);
+        merged.push(item);
+      }
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  if (!merged.length) {
+    if (lastError) throw lastError;
+    const err = new Error("No candidate problems from current filters.");
+    err.code = "no_candidates";
+    throw err;
+  }
+
+  return {
+    candidates: merged,
+    hadPartialFailure: Boolean(lastError)
+  };
+}
+
+async function ensureCandidatePool(settings, dailyState, { forceRefresh = false } = {}) {
   const query = buildProblemQuery(settings);
-  const response = await searchProblem(query, 1);
-  const candidates = extractProblemCandidates(response);
-  const ids = candidates.map((item) => item.problemId);
+  const poolKey = buildCandidatePoolKey(query);
+  const cachedCandidates = Array.isArray(dailyState.candidatePool) ? dailyState.candidatePool : [];
+  if (!forceRefresh && isCandidatePoolUsable(dailyState, poolKey)) {
+    return {
+      query,
+      candidates: cachedCandidates,
+      refreshed: false,
+      hadPartialFailure: false,
+      usedStaleFallback: false,
+      fallbackReason: ""
+    };
+  }
+
+  try {
+    const { candidates, hadPartialFailure } = await fetchCandidatePool(query);
+    dailyState.candidatePoolKey = poolKey;
+    dailyState.candidatePoolUpdatedAt = now();
+    dailyState.candidatePool = candidates;
+    return {
+      query,
+      candidates,
+      refreshed: true,
+      hadPartialFailure,
+      usedStaleFallback: false,
+      fallbackReason: ""
+    };
+  } catch (err) {
+    if (String(dailyState.candidatePoolKey || "") === poolKey && cachedCandidates.length) {
+      return {
+        query,
+        candidates: cachedCandidates,
+        refreshed: false,
+        hadPartialFailure: false,
+        usedStaleFallback: true,
+        fallbackReason: classifyError(err)
+      };
+    }
+    throw err;
+  }
+}
+
+async function pickProblem(settings, dailyState, dateKST, rerollUsed) {
+  const pool = await ensureCandidatePool(settings, dailyState);
+  const ids = pool.candidates.map((item) => item.problemId);
   if (!ids.length) {
     const err = new Error("No candidate problems from current filters.");
     err.code = "no_candidates";
@@ -104,13 +193,17 @@ async function pickProblem(settings, dateKST, rerollUsed) {
   }
 
   const problemId = pickDeterministicProblemId(ids, dateKST, rerollUsed);
-  const chosen = candidates.find((item) => item.problemId === problemId);
+  const chosen = pool.candidates.find((item) => item.problemId === problemId);
   return {
     problemId,
     level: Number(chosen?.level || 0),
     titleKo: chosen?.titleKo || "",
     titleEn: chosen?.titleEn || "",
-    query
+    query: pool.query,
+    poolRefreshed: pool.refreshed,
+    poolPartialFailure: pool.hadPartialFailure,
+    poolUsedStaleFallback: pool.usedStaleFallback,
+    poolFallbackReason: pool.fallbackReason
   };
 }
 
@@ -132,6 +225,9 @@ function createFreshDaily(dateKST, prev) {
     emergencyUntil: prev?.emergencyUntil || 0,
     streak: prev?.streak || 0,
     lastDoneDateKST: prev?.lastDoneDateKST || "",
+    candidatePoolKey: prev?.candidatePoolKey || "",
+    candidatePoolUpdatedAt: prev?.candidatePoolUpdatedAt || 0,
+    candidatePool: prev?.candidatePool || [],
     history,
     recentLogs: prev?.recentLogs || []
   });
@@ -159,16 +255,25 @@ async function ensureDailyState({ forceRepick = false } = {}) {
       daily.todayProblemTitleEn = "";
       daily.pickedFromQuery = "";
       daily.lastApiError = "missing_handle";
+      daily.candidatePoolKey = "";
+      daily.candidatePoolUpdatedAt = 0;
+      daily.candidatePool = [];
       changed = true;
     } else if (forceRepick || !daily.todayProblemId) {
       try {
-        const picked = await pickProblem(settings, todayDateKST, daily.rerollUsed);
+        const picked = await pickProblem(settings, daily, todayDateKST, daily.rerollUsed);
         daily.todayProblemId = picked.problemId;
         daily.todayProblemLevel = picked.level;
         daily.todayProblemTitleKo = picked.titleKo;
         daily.todayProblemTitleEn = picked.titleEn;
         daily.pickedFromQuery = picked.query;
         daily.lastApiError = "";
+        if (picked.poolPartialFailure) {
+          await log("warn", "Candidate pool fetched with partial failure", { query: picked.query });
+        }
+        if (picked.poolUsedStaleFallback) {
+          await log("warn", "Candidate pool stale fallback used", { reason: picked.poolFallbackReason });
+        }
         changed = true;
       } catch (err) {
         daily.todayProblemId = 0;
@@ -272,13 +377,19 @@ async function rerollToday() {
   if (daily.rerollUsed >= settings.rerollLimitPerDay) throw new Error("reroll_limit");
   daily.rerollUsed += 1;
 
-  const picked = await pickProblem(settings, todayDateKST, daily.rerollUsed);
+  const picked = await pickProblem(settings, daily, todayDateKST, daily.rerollUsed);
   daily.todayProblemId = picked.problemId;
   daily.todayProblemLevel = picked.level;
   daily.todayProblemTitleKo = picked.titleKo;
   daily.todayProblemTitleEn = picked.titleEn;
   daily.pickedFromQuery = picked.query;
   daily.lastApiError = "";
+  if (picked.poolPartialFailure) {
+    await log("warn", "Candidate pool fetched with partial failure", { query: picked.query });
+  }
+  if (picked.poolUsedStaleFallback) {
+    await log("warn", "Candidate pool stale fallback used", { reason: picked.poolFallbackReason });
+  }
   autoRetryAttempt = 0;
   await setDailyState(daily);
   await setBadge(daily);
@@ -382,18 +493,27 @@ async function resetToday() {
   if (daily.emergencyUntil <= now()) daily.emergencyUntil = 0;
 
   if (settings.handle) {
-    const picked = await pickProblem(settings, todayDateKST, 0);
+    const picked = await pickProblem(settings, daily, todayDateKST, 0);
     daily.todayProblemId = picked.problemId;
     daily.todayProblemLevel = picked.level;
     daily.todayProblemTitleKo = picked.titleKo;
     daily.todayProblemTitleEn = picked.titleEn;
     daily.pickedFromQuery = picked.query;
+    if (picked.poolPartialFailure) {
+      await log("warn", "Candidate pool fetched with partial failure", { query: picked.query });
+    }
+    if (picked.poolUsedStaleFallback) {
+      await log("warn", "Candidate pool stale fallback used", { reason: picked.poolFallbackReason });
+    }
   } else {
     daily.todayProblemId = 0;
     daily.todayProblemLevel = 0;
     daily.todayProblemTitleKo = "";
     daily.todayProblemTitleEn = "";
     daily.pickedFromQuery = "";
+    daily.candidatePoolKey = "";
+    daily.candidatePoolUpdatedAt = 0;
+    daily.candidatePool = [];
   }
 
   recomputeStreak(daily, todayDateKST);

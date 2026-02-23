@@ -56,6 +56,9 @@ export const DEFAULT_DAILY_STATE = Object.freeze({
   streak: 0,
   lastDoneDateKST: "",
   lastApiError: "",
+  candidatePoolKey: "",
+  candidatePoolUpdatedAt: 0,
+  candidatePool: [],
   history: [],
   recentLogs: []
 });
@@ -63,6 +66,7 @@ export const DEFAULT_DAILY_STATE = Object.freeze({
 const KST_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_HISTORY = 60;
 const MAX_LOGS = 200;
+const MAX_CANDIDATE_POOL = 500;
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -172,6 +176,23 @@ function normalizeLogs(logs) {
   return out.slice(-MAX_LOGS);
 }
 
+function normalizeCandidatePool(pool) {
+  const out = [];
+  const seen = new Set();
+  for (const row of asArray(pool)) {
+    const problemId = Number(row?.problemId || 0);
+    if (!Number.isInteger(problemId) || problemId <= 0 || seen.has(problemId)) continue;
+    seen.add(problemId);
+    out.push({
+      problemId,
+      level: clampNumber(row?.level, 0, 30, 0),
+      titleKo: String(row?.titleKo || ""),
+      titleEn: String(row?.titleEn || "")
+    });
+  }
+  return out.slice(0, MAX_CANDIDATE_POOL);
+}
+
 export function normalizeDailyState(input) {
   const merged = { ...DEFAULT_DAILY_STATE, ...(input || {}) };
   return {
@@ -191,6 +212,9 @@ export function normalizeDailyState(input) {
     streak: clampNumber(merged.streak, 0, 10_000, 0),
     lastDoneDateKST: KST_DATE_RE.test(String(merged.lastDoneDateKST || "")) ? String(merged.lastDoneDateKST) : "",
     lastApiError: String(merged.lastApiError || ""),
+    candidatePoolKey: String(merged.candidatePoolKey || ""),
+    candidatePoolUpdatedAt: clampNumber(merged.candidatePoolUpdatedAt, 0, Number.MAX_SAFE_INTEGER, 0),
+    candidatePool: normalizeCandidatePool(merged.candidatePool),
     history: normalizeHistory(merged.history),
     recentLogs: normalizeLogs(merged.recentLogs)
   };
