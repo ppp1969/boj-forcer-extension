@@ -40,6 +40,11 @@ const I18N = {
     msgAutoSaved: "Auto-saved",
     msgChecking: "Checking...",
     msgHandleRequired: "Enter nickname first.",
+    msgHandleValid: "Valid nickname: {handle}",
+    msgHandleNotFound: "Nickname does not exist.",
+    msgHandleNetwork: "Network error occurred.",
+    msgHandleRateLimited: "API rate limit reached. Please try again later.",
+    msgHandleUnknown: "Failed to validate nickname.",
     msgResetTodayConfirm:
       "Reset Today: today problem, reroll count, solved status, and last check time will reset. Continue?",
     msgFactoryConfirm:
@@ -184,6 +189,17 @@ function normalizeTheme(theme) {
 
 function applyTheme(theme) {
   document.documentElement.setAttribute("data-theme", normalizeTheme(theme));
+}
+
+function formatTemplate(message, values = {}) {
+  return Object.entries(values).reduce((out, [key, value]) => out.replace(`{${key}}`, String(value ?? "")), message);
+}
+
+function getHandleValidationErrorMessage(locale, errorCode) {
+  if (errorCode === "not_found") return t(locale, "msgHandleNotFound");
+  if (errorCode === "rate_limited") return t(locale, "msgHandleRateLimited");
+  if (errorCode === "offline_or_cors" || errorCode === "timeout") return t(locale, "msgHandleNetwork");
+  return t(locale, "msgHandleUnknown");
 }
 
 async function send(type, extra = {}) {
@@ -462,10 +478,10 @@ els.btnValidateHandle.addEventListener("click", async () => {
   els.handleCheckMsg.textContent = t(locale, "msgChecking");
   const res = await send("VALIDATE_HANDLE", { handle });
   if (!res?.ok) {
-    els.handleCheckMsg.textContent = `Invalid: ${res?.error || "unknown"}`;
+    els.handleCheckMsg.textContent = getHandleValidationErrorMessage(locale, String(res?.error || ""));
     return;
   }
-  els.handleCheckMsg.textContent = `OK: ${res.user?.handle || handle}`;
+  els.handleCheckMsg.textContent = formatTemplate(t(locale, "msgHandleValid"), { handle: res.user?.handle || handle });
 });
 
 load().catch((err) => {
