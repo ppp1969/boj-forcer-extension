@@ -174,6 +174,7 @@ const els = {
 let tagChecks = new Map();
 let isHydrating = false;
 let saveTimer = null;
+let persistedHandle = "";
 
 function t(locale, key) {
   return I18N[locale]?.[key] ?? I18N.en[key] ?? key;
@@ -208,6 +209,15 @@ function getHandleValidationErrorMessage(locale, errorCode) {
 function getHandleValidationSuccessMessage(locale, handle) {
   if (locale === "ko") return `유효한 닉네임입니다: ${handle}`;
   return formatTemplate(t(locale, "msgHandleValid"), { handle });
+}
+
+function getTierRangeFromUserTier(userTier) {
+  const tier = Number(userTier);
+  if (!Number.isInteger(tier) || tier <= 0) return null;
+  return {
+    levelMin: Math.max(1, tier - 5),
+    levelMax: Math.min(30, tier + 5)
+  };
 }
 
 async function send(type, extra = {}) {
@@ -337,15 +347,19 @@ function applyLocale(locale) {
   updateTagTexts(l);
 }
 
-function fillForm(settings) {
+function fillForm(settings, options = {}) {
+  const preserveHandleDraft = options.preserveHandleDraft === true;
   isHydrating = true;
   try {
+    persistedHandle = String(settings.handle || "");
     els.uiLanguage.value = settings.uiLanguage === "ko" ? "ko" : "en";
     els.theme.value = normalizeTheme(settings.theme);
     applyTheme(els.theme.value);
     applyLocale(els.uiLanguage.value);
 
-    els.handle.value = settings.handle;
+    if (!preserveHandleDraft) {
+      els.handle.value = persistedHandle;
+    }
     els.levelMin.value = String(settings.filters.levelMin);
     els.levelMax.value = String(settings.filters.levelMax);
     els.langKo.checked = settings.filters.languages.includes("ko");
@@ -365,10 +379,13 @@ function fillForm(settings) {
   }
 }
 
-function collectForm() {
+function collectForm(options = {}) {
+  const includeHandle = options.includeHandle === true;
+  const handleOverride = typeof options.handleOverride === "string" ? options.handleOverride : null;
+  const handleValue = includeHandle ? handleOverride ?? els.handle.value.trim() : persistedHandle;
   const settings = {
     ...DEFAULT_SETTINGS,
-    handle: els.handle.value.trim(),
+    handle: handleValue,
     uiLanguage: currentLocale(),
     theme: normalizeTheme(els.theme.value),
     filters: {
@@ -391,13 +408,15 @@ function collectForm() {
   return normalizeSettings(settings);
 }
 
-async function saveNow() {
+async function saveNow(options = {}) {
+  const includeHandle = options.includeHandle === true;
+  const handleOverride = typeof options.handleOverride === "string" ? options.handleOverride : null;
   const locale = currentLocale();
   els.saveMsg.textContent = t(locale, "msgAutoSaving");
-  const settings = collectForm();
+  const settings = collectForm({ includeHandle, handleOverride });
   const res = await send("SAVE_SETTINGS", { settings });
   if (!res?.ok) throw new Error(res?.error || "save_failed");
-  fillForm(res.snapshot.settings);
+  fillForm(res.snapshot.settings, { preserveHandleDraft: !includeHandle });
   els.saveMsg.textContent = t(locale, "msgAutoSaved");
 }
 
@@ -415,7 +434,6 @@ function bindAutoSaveInputs() {
   const controls = [
     els.uiLanguage,
     els.theme,
-    els.handle,
     els.levelMin,
     els.levelMax,
     els.langKo,
@@ -489,7 +507,19 @@ els.btnValidateHandle.addEventListener("click", async () => {
     els.handleCheckMsg.textContent = getHandleValidationErrorMessage(locale, String(res?.error || ""));
     return;
   }
-  els.handleCheckMsg.textContent = getHandleValidationSuccessMessage(locale, res.user?.handle || handle);
+  const normalizedHandle = String(res.user?.handle || handle);
+  const tierRange = getTierRangeFromUserTier(res.user?.tier);
+  if (tierRange) {
+    els.levelMin.value = String(tierRange.levelMin);
+    els.levelMax.value = String(tierRange.levelMax);
+  }
+  try {
+    await saveNow({ includeHandle: true, handleOverride: normalizedHandle });
+    els.handleCheckMsg.textContent = getHandleValidationSuccessMessage(locale, normalizedHandle);
+  } catch (err) {
+    els.handleCheckMsg.textContent = t(locale, "msgHandleUnknown");
+    els.saveMsg.textContent = String(err?.message || err);
+  }
 });
 
 load().catch((err) => {
