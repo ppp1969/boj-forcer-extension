@@ -48,7 +48,10 @@ export const DEFAULT_DAILY_STATE = Object.freeze({
   todayProblemTitleKo: "",
   todayProblemTitleEn: "",
   pickedFromQuery: "",
+  doneToday: false,
   solved: false,
+  currentProblemSolved: false,
+  autoAdvanceUsed: 0,
   lastSolvedCheckAt: 0,
   rerollUsed: 0,
   emergencyUsedDateKST: "",
@@ -195,6 +198,11 @@ function normalizeCandidatePool(pool) {
 
 export function normalizeDailyState(input) {
   const merged = { ...DEFAULT_DAILY_STATE, ...(input || {}) };
+  const source = input && typeof input === "object" ? input : {};
+  const hasDoneToday = Object.prototype.hasOwnProperty.call(source, "doneToday");
+  const hasCurrentProblemSolved = Object.prototype.hasOwnProperty.call(source, "currentProblemSolved");
+  const doneToday = hasDoneToday ? Boolean(source.doneToday) : Boolean(merged.solved);
+  const currentProblemSolved = hasCurrentProblemSolved ? Boolean(source.currentProblemSolved) : doneToday;
   return {
     dateKST: KST_DATE_RE.test(String(merged.dateKST || "")) ? String(merged.dateKST) : "",
     todayProblemId: clampNumber(merged.todayProblemId, 0, 1_000_000, 0),
@@ -202,7 +210,10 @@ export function normalizeDailyState(input) {
     todayProblemTitleKo: String(merged.todayProblemTitleKo || ""),
     todayProblemTitleEn: String(merged.todayProblemTitleEn || ""),
     pickedFromQuery: String(merged.pickedFromQuery || ""),
-    solved: Boolean(merged.solved),
+    doneToday,
+    solved: doneToday,
+    currentProblemSolved,
+    autoAdvanceUsed: clampNumber(merged.autoAdvanceUsed, 0, 10_000, 0),
     lastSolvedCheckAt: clampNumber(merged.lastSolvedCheckAt, 0, Number.MAX_SAFE_INTEGER, 0),
     rerollUsed: clampNumber(merged.rerollUsed, 0, 100, 0),
     emergencyUsedDateKST: KST_DATE_RE.test(String(merged.emergencyUsedDateKST || ""))
@@ -296,7 +307,8 @@ export function addDaysKST(dateKST, days) {
 export function computeStats(dailyState, todayDateKST) {
   const history = normalizeHistory(dailyState.history);
   const doneSet = new Set(history.filter((h) => h.done).map((h) => h.dateKST));
-  if (dailyState.solved && todayDateKST) {
+  const doneToday = Boolean(dailyState.doneToday ?? dailyState.solved);
+  if (doneToday && todayDateKST) {
     doneSet.add(todayDateKST);
   }
   const solvedToday = Boolean(todayDateKST) && doneSet.has(todayDateKST);
