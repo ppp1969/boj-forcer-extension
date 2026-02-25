@@ -18,6 +18,8 @@ import { searchProblem, extractProblemCandidates, checkSolved, checkHandle, clas
 const NORMAL_REDIRECT_COOLDOWN_MS = 1200;
 const DEBUG_REDIRECT_COOLDOWN_MS = 350;
 const MAX_AUTO_RECHECK = 6;
+const ACTIVE_RECHECK_INTERVAL_MS = 60 * 1000;
+const SOLVED_CHECK_DEDUP_MS = 15 * 1000;
 const AUTO_RECHECK_DELAYS_MS = [10000, 30000, 60000, 300000, 600000, 1800000];
 const DEBUG_AUTO_RECHECK_DELAYS_MS = [2000, 4000, 8000, 12000, 20000, 30000];
 const CANDIDATE_POOL_PAGE_COUNT = 5;
@@ -26,7 +28,9 @@ const CANDIDATE_POOL_TTL_MS = 6 * 60 * 60 * 1000;
 let ensureDailyLock = null;
 let recheckInFlight = false;
 let autoRetryTimer = null;
+let activeRecheckTimer = null;
 let autoRetryAttempt = 0;
+let popupOpenCount = 0;
 const redirectGuard = new Map();
 
 function now() {
@@ -322,7 +326,7 @@ async function ensureDailyState({ forceRepick = false } = {}) {
     recomputeStreak(daily, todayDateKST);
     if (changed) daily = await setDailyState(daily);
     await setBadge(daily);
-    if (settings.autoRecheck) maybeScheduleAutoRecheck(settings, daily);
+    syncRecheckSchedulers(settings, daily);
 
     return { settings, daily, todayDateKST };
   })();
@@ -340,9 +344,35 @@ function clearAutoTimer() {
   autoRetryTimer = null;
 }
 
+function clearActiveRecheckTimer() {
+  if (!activeRecheckTimer) return;
+  clearInterval(activeRecheckTimer);
+  activeRecheckTimer = null;
+}
+
+function getRecentCheckWaitMs(daily) {
+  const last = Number(daily?.lastSolvedCheckAt || 0);
+  if (!Number.isFinite(last) || last <= 0) return 0;
+  const elapsed = now() - last;
+  if (elapsed >= SOLVED_CHECK_DEDUP_MS) return 0;
+  return SOLVED_CHECK_DEDUP_MS - elapsed;
+}
+
+function shouldUseActiveRecheck(settings, daily) {
+  return Boolean(
+    settings?.autoRecheck &&
+      popupOpenCount > 0 &&
+      settings?.handle &&
+      Number(daily?.todayProblemId || 0) > 0 &&
+      !Boolean(daily?.currentProblemSolved) &&
+      !isEmergencyActive(daily)
+  );
+}
+
 function maybeScheduleAutoRecheck(settings, daily) {
   clearAutoTimer();
   if (!settings.autoRecheck) return;
+  if (popupOpenCount > 0) return;
   if (!settings.handle || !daily.todayProblemId) return;
   if (isDayCompleted(daily) || isEmergencyActive(daily)) return;
   if (autoRetryAttempt >= MAX_AUTO_RECHECK) return;
@@ -354,12 +384,29 @@ function maybeScheduleAutoRecheck(settings, daily) {
   }, delay);
 }
 
+function syncRecheckSchedulers(settings, daily) {
+  const useActive = shouldUseActiveRecheck(settings, daily);
+  if (useActive) {
+    clearAutoTimer();
+    if (!activeRecheckTimer) {
+      activeRecheckTimer = setInterval(() => {
+        performSolvedCheck("active").catch(() => {});
+      }, ACTIVE_RECHECK_INTERVAL_MS);
+    }
+    return;
+  }
+  clearActiveRecheckTimer();
+  maybeScheduleAutoRecheck(settings, daily);
+}
+
 async function performSolvedCheck(trigger = "manual") {
   if (recheckInFlight) return { ok: false, reason: "in_flight" };
   recheckInFlight = true;
   try {
     const { settings, daily, todayDateKST } = await ensureDailyState();
     if (!settings.handle || !daily.todayProblemId) return { ok: false, reason: "not_ready" };
+    const waitMs = getRecentCheckWaitMs(daily);
+    if (waitMs > 0) return { ok: false, reason: "too_recent", waitMs };
 
     const solvedProblemId = daily.todayProblemId;
     const solved = await checkSolved(settings.handle, solvedProblemId);
@@ -399,7 +446,7 @@ async function performSolvedCheck(trigger = "manual") {
       await setDailyState(daily);
       await setBadge(daily);
       autoRetryAttempt = 0;
-      maybeScheduleAutoRecheck(settings, daily);
+      syncRecheckSchedulers(settings, daily);
       await log("info", "Solved check success -> auto-next", {
         trigger,
         solvedProblemId,
@@ -413,7 +460,7 @@ async function performSolvedCheck(trigger = "manual") {
     await setDailyState(daily);
     await setBadge(daily);
     if (trigger === "auto") autoRetryAttempt += 1;
-    maybeScheduleAutoRecheck(settings, daily);
+    syncRecheckSchedulers(settings, daily);
     return { ok: true, solved: false };
   } catch (err) {
     const code = classifyError(err);
@@ -424,7 +471,7 @@ async function performSolvedCheck(trigger = "manual") {
     await setBadge(daily);
     autoRetryAttempt += 1;
     const settings = await getSettings();
-    maybeScheduleAutoRecheck(settings, daily);
+    syncRecheckSchedulers(settings, daily);
     await log("warn", "Solved check failed", { code, trigger });
     return { ok: false, reason: code };
   } finally {
@@ -452,7 +499,7 @@ async function rerollToday() {
   autoRetryAttempt = 0;
   await setDailyState(daily);
   await setBadge(daily);
-  maybeScheduleAutoRecheck(settings, daily);
+  syncRecheckSchedulers(settings, daily);
   return daily;
 }
 
@@ -464,6 +511,7 @@ async function activateEmergency() {
   await setDailyState(daily);
   await setBadge(daily);
   clearAutoTimer();
+  clearActiveRecheckTimer();
   return daily;
 }
 
@@ -473,7 +521,7 @@ async function deactivateEmergency() {
   daily.emergencyUntil = 0;
   await setDailyState(daily);
   await setBadge(daily);
-  maybeScheduleAutoRecheck(settings, daily);
+  syncRecheckSchedulers(settings, daily);
   return daily;
 }
 
@@ -579,6 +627,7 @@ async function resetToday() {
   recomputeStreak(daily, todayDateKST);
   await setDailyState(daily);
   await setBadge(daily);
+  syncRecheckSchedulers(settings, daily);
   return daily;
 }
 
@@ -589,6 +638,8 @@ async function factoryReset() {
   await setDailyState(DEFAULT_DAILY_STATE);
   autoRetryAttempt = 0;
   clearAutoTimer();
+  clearActiveRecheckTimer();
+  popupOpenCount = 0;
   await ensureDailyState({ forceRepick: true });
 }
 
@@ -617,6 +668,21 @@ chrome.tabs.onCreated.addListener((tab) => {
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   const run = async () => {
     const type = message?.type;
+    if (type === "POPUP_OPENED") {
+      popupOpenCount += 1;
+      const { daily } = await ensureDailyState();
+      let result = { ok: false, reason: "not_pending" };
+      if (daily.todayProblemId && !daily.currentProblemSolved && !isEmergencyActive(daily)) {
+        result = await performSolvedCheck("popup_open");
+      }
+      return { ok: true, result, snapshot: await buildSnapshot() };
+    }
+    if (type === "POPUP_CLOSED") {
+      popupOpenCount = Math.max(0, popupOpenCount - 1);
+      const { settings, daily } = await ensureDailyState();
+      syncRecheckSchedulers(settings, daily);
+      return { ok: true };
+    }
     if (type === "GET_SNAPSHOT") return { ok: true, snapshot: await buildSnapshot() };
     if (type === "SET_MODE") return { ok: false, error: "mode_locked" };
     if (type === "SAVE_SETTINGS") {

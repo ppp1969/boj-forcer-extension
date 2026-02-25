@@ -86,6 +86,8 @@ const els = {
 
 let latestSnapshot = null;
 let recheckLoading = false;
+let popupSessionOpened = false;
+let popupSessionClosedNotified = false;
 
 function t(locale, key) {
   return I18N[locale]?.[key] ?? I18N.en[key] ?? key;
@@ -103,9 +105,16 @@ function applyTheme(theme) {
   root.setAttribute("data-theme", normalized);
 }
 
-function formatTs(ts) {
+function formatLastCheckAgo(ts) {
   if (!ts) return "-";
-  return new Date(ts).toLocaleString();
+  const elapsedMs = Math.max(0, Date.now() - Number(ts));
+  const elapsedMin = Math.floor(elapsedMs / 60000);
+  if (elapsedMin < 1) return "just now";
+  if (elapsedMin < 60) return `${elapsedMin}m ago`;
+  const elapsedHours = Math.floor(elapsedMin / 60);
+  if (elapsedHours < 24) return `${elapsedHours}h ago`;
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  return `${elapsedDays}d ago`;
 }
 
 function formatRemainingMs(ms) {
@@ -196,7 +205,7 @@ function render(snapshot) {
   els.statStreak.textContent = String(stats.streak);
   els.statTotal.textContent = String(stats.totalDone);
   els.statRate.textContent = `${stats.recent30Rate}%`;
-  els.lastCheckText.textContent = `${t(locale, "lastCheck")}: ${formatTs(daily.lastSolvedCheckAt)}`;
+  els.lastCheckText.textContent = `${t(locale, "lastCheck")}: ${formatLastCheckAgo(daily.lastSolvedCheckAt)}`;
   els.errorText.textContent = localizeError(locale, daily.lastApiError);
 }
 
@@ -204,10 +213,17 @@ async function send(type, extra = {}) {
   return chrome.runtime.sendMessage({ type, ...extra });
 }
 
-async function refresh() {
-  const res = await send("GET_SNAPSHOT");
+async function refresh(opened = false) {
+  if (opened) popupSessionOpened = true;
+  const res = await send(opened ? "POPUP_OPENED" : "GET_SNAPSHOT");
   if (!res?.ok) throw new Error(res?.error || "load_failed");
   render(res.snapshot);
+}
+
+function notifyPopupClosed() {
+  if (!popupSessionOpened || popupSessionClosedNotified) return;
+  popupSessionClosedNotified = true;
+  send("POPUP_CLOSED").catch(() => {});
 }
 
 els.btnRecheck.addEventListener("click", async () => {
@@ -261,7 +277,10 @@ els.btnOptions.addEventListener("click", () => {
   chrome.runtime.openOptionsPage();
 });
 
-refresh().catch((err) => {
+refresh(true).catch((err) => {
   // eslint-disable-next-line no-console
   console.error(err);
 });
+
+window.addEventListener("pagehide", notifyPopupClosed);
+window.addEventListener("unload", notifyPopupClosed);
