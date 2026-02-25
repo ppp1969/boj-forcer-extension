@@ -4,6 +4,8 @@ BOJ 문제를 하루 1개 강제로 풀게 만드는 Chrome 확장 프로그램�
 
 English subtitle: **Random BOJ Problem Picker & Focus Enforcer**
 
+현재 버전: **v1.1.0**
+
 ## 설치 (일반 사용자)
 Chrome 웹스토어에서 설치하는 것을 권장합니다.
 
@@ -26,8 +28,11 @@ Chrome 웹스토어에서 설치하는 것을 권장합니다.
 ## 핵심 기능
 - solved.ac 필터 기반 오늘의 문제 자동 선정
 - 미해결 상태에서 비허용 사이트 접근 시 문제 페이지로 리다이렉트
+- 클리어 시 기록 보존 + 다음 랜덤 문제 자동 세팅(연속 풀이 흐름)
+- Check 시스템 고도화(팝업 즉시 검사, 활성 상태 1분 폴링, 중복 호출 방지)
+- 오늘 문제 변경(Random Pick / Problem Number) + 공용 일일 변경 카운트
+- 옵션 페이지 태그 UX 개선(검색, Select All/Clear All, Show More/Show Less)
 - 일일 Reroll 제한, Emergency 시간, 자동 검사
-- 옵션 페이지에서 티어/언어/태그/화이트리스트 설정
 
 ## 아키텍처 요약
 - `manifest.json`: MV3 확장 설정
