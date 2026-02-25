@@ -419,6 +419,42 @@ select.field option{
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   gap: 8px;
+  transition: max-height .18s ease;
+}
+.tagGrid.isCollapsed{
+  overflow: hidden;
+}
+.tagToolbar{
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.tagSearchInput{
+  flex: 1;
+}
+.tagActionRow{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  min-width: 240px;
+}
+.tagActionBtn{
+  width: 100%;
+  min-width: 110px;
+  padding-inline: 12px;
+}
+.tagModeHint{
+  margin-top: -2px;
+}
+.tagExpandRow{
+  display: flex;
+  justify-content: flex-end;
+}
+.tagExpandBtn{
+  width: auto;
+  min-width: 120px;
+  max-width: 160px;
+  padding-inline: 14px;
 }
 .tagItem{
   display: flex;
@@ -433,6 +469,37 @@ select.field option{
 }
 .tagItem input{
   margin: 0;
+}
+.tagItem.isHidden{
+  display: none;
+}
+.tagItem.isCollapsedHidden{
+  display: none;
+}
+.tagSearchEmpty{
+  margin-top: 2px;
+}
+.isHidden{
+  display: none !important;
+}
+@media (max-width: 620px){
+  .tagToolbar{
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .tagActionRow{
+    min-width: 0;
+  }
+  .tagActionBtn{
+    width: 100%;
+  }
+  .tagExpandRow{
+    justify-content: stretch;
+  }
+  .tagExpandBtn{
+    width: 100%;
+    max-width: none;
+  }
 }
 
 .mono{

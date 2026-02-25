@@ -108,7 +108,7 @@ let latestSnapshot = null;
 let recheckLoading = false;
 let popupSessionOpened = false;
 let popupSessionClosedNotified = false;
-let changePanelOpen = true;
+let changePanelOpen = false;
 let changeMode = "random";
 
 function t(locale, key) {
@@ -402,7 +402,7 @@ els.btnOptions.addEventListener("click", () => {
 });
 
 setChangeMode("random");
-setChangePanelOpen(true);
+setChangePanelOpen(false);
 refresh(true).catch((err) => {
   // eslint-disable-next-line no-console
   console.error(err);

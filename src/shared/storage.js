@@ -28,6 +28,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
     requireSolvable: true,
     excludeWarnings: true,
     minSolvedCount: 1,
+    tagSelectionBase: "all",
     includeTags: [],
     excludeTags: []
   },
@@ -87,7 +88,8 @@ function cleanTagList(tags) {
   const out = [];
   const seen = new Set();
   for (const raw of asArray(tags)) {
-    const tag = String(raw || "").trim().toLowerCase();
+    const original = String(raw || "").trim().toLowerCase();
+    const tag = original === "tree" ? "trees" : original;
     if (!tag || seen.has(tag)) continue;
     seen.add(tag);
     out.push(tag);
@@ -121,6 +123,7 @@ function normalizeFilters(filters) {
     requireSolvable: Boolean(merged.requireSolvable),
     excludeWarnings: Boolean(merged.excludeWarnings),
     minSolvedCount: clampNumber(merged.minSolvedCount, 1, 1_000_000, DEFAULT_SETTINGS.filters.minSolvedCount),
+    tagSelectionBase: merged.tagSelectionBase === "none" ? "none" : "all",
     includeTags: cleanTagList(merged.includeTags),
     excludeTags: cleanTagList(merged.excludeTags)
   };
