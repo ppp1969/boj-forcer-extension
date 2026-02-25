@@ -1,6 +1,13 @@
 const API_BASE = "https://solved.ac/api/v3";
 const DEFAULT_TIMEOUT_MS = 10000;
 
+function normalizeTagKey(rawTag) {
+  const tag = String(rawTag || "").trim().toLowerCase();
+  if (!tag) return "";
+  if (tag === "tree") return "trees";
+  return tag;
+}
+
 function classifyHttpError(status) {
   if (status === 429) return "rate_limited";
   if (status >= 500) return "server_error";
@@ -88,4 +95,45 @@ export async function checkHandle(handle) {
 
 export async function getProblemById(problemId) {
   return apiGet("/problem/show", { problemId: Number(problemId) || 0 });
+}
+
+function getTagDisplayName(displayNames, language) {
+  const list = Array.isArray(displayNames) ? displayNames : [];
+  const matched = list.find((row) => row?.language === language && row?.name);
+  if (matched?.name) return String(matched.name);
+  return "";
+}
+
+export function extractTagChoices(tagListResponse) {
+  const items = Array.isArray(tagListResponse?.items) ? tagListResponse.items : [];
+  const out = [];
+  const seen = new Set();
+
+  for (const item of items) {
+    const id = normalizeTagKey(item?.key);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+
+    const enName = getTagDisplayName(item?.displayNames, "en");
+    const koName = getTagDisplayName(item?.displayNames, "ko");
+
+    out.push({
+      id,
+      en: enName || koName || id,
+      ko: koName || enName || id,
+      problemCount: Number(item?.problemCount || 0)
+    });
+  }
+
+  out.sort((a, b) => {
+    if (b.problemCount !== a.problemCount) return b.problemCount - a.problemCount;
+    return a.en.localeCompare(b.en);
+  });
+
+  return out.map(({ problemCount, ...choice }) => choice);
+}
+
+export async function getTagChoices() {
+  const response = await apiGet("/tag/list");
+  return extractTagChoices(response);
 }

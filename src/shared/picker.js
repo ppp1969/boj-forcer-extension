@@ -1,6 +1,13 @@
 const TIER_NAMES = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Ruby"];
 const TIER_ROMAN = ["V", "IV", "III", "II", "I"];
 
+function normalizeTagKey(rawTag) {
+  const tag = String(rawTag || "").trim().toLowerCase();
+  if (!tag) return "";
+  if (tag === "tree") return "trees";
+  return tag;
+}
+
 function tierNameByLevel(level) {
   const n = Math.max(1, Math.min(30, Number(level) || 1));
   const tierIndex = Math.floor((n - 1) / 5);
@@ -24,7 +31,7 @@ export function normalizeTagList(input) {
   const seen = new Set();
   const out = [];
   for (const raw of String(input || "").split(/\s|,|\n/)) {
-    const tag = raw.trim().toLowerCase();
+    const tag = normalizeTagKey(raw);
     if (!tag || seen.has(tag)) continue;
     seen.add(tag);
     out.push(tag);
@@ -62,12 +69,12 @@ export function buildProblemQuery(settings) {
   if (minSolvedCount > 0) tokens.push(`s#${Math.floor(minSolvedCount)}..`);
 
   for (const tag of includeTags) {
-    const t = String(tag || "").trim().toLowerCase();
+    const t = normalizeTagKey(tag);
     if (!t) continue;
     tokens.push(`#${t}`);
   }
   for (const tag of excludeTags) {
-    const t = String(tag || "").trim().toLowerCase();
+    const t = normalizeTagKey(tag);
     if (!t) continue;
     tokens.push(`!#${t}`);
   }

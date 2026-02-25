@@ -1,120 +1,96 @@
-import { buildTierOptions } from "../shared/picker.js";
+﻿import { buildTierOptions } from "../shared/picker.js";
+import { getTagChoices } from "../shared/solvedac-api.js";
 import { DEFAULT_SETTINGS, normalizeSettings, parseDomainList } from "../shared/storage.js";
 
-const I18N = {
-  en: {
-    optTitle: "BOJ Forcer Settings",
-    lblUiLanguage: "Language",
-    lblTheme: "Theme",
-    optThemeVivid: "Vivid",
-    optThemeDark: "Dark",
-    optThemeLight: "Light",
-    secAccount: "Account",
-    lblHandle: "Nickname (solved.ac handle)",
-    btnCheck: "Check",
-    secFilter: "Problem Filter",
-    lblLevelMin: "Min Tier",
-    lblLevelMax: "Max Tier",
-    lblLangKo: "Language KO",
-    lblLangEn: "Language EN",
-    lblReqSolvable: "Require Solvable (o?true)",
-    lblExcludeWarnings: "Exclude Warnings (w?false)",
-    hintReqSolvable: "Only pick problems currently marked solvable on solved.ac.",
-    hintExcludeWarnings: "Exclude warning-marked problems.",
-    lblMinSolvedCount: "Min Solved Count",
-    lblTags: "Problem Tags",
-    hintTags: "All tags are selected by default. Uncheck tags you want to exclude.",
-    secWhitelist: "Whitelist",
-    lblWhitelist: "Domain List",
-    secLimits: "Limits",
-    lblRerollLimit: "Today Change Per Day",
-    lblEmergencyHours: "Emergency Hours",
-    lblAutoRecheck: "Auto Check",
-    secDebug: "Debug",
-    lblDebugMode: "Debug Mode",
-    lblDebugDate: "Debug Date (YYYY-MM-DD)",
-    hintDebugMode: "Shows richer logs and uses shorter cooldown/retry intervals for testing.",
-    btnResetToday: "Reset Today",
-    btnFactoryReset: "Factory Reset",
-    msgAutoSaving: "Auto-saving...",
-    msgAutoSaved: "Auto-saved",
-    msgChecking: "Checking...",
-    msgHandleRequired: "Enter nickname first.",
-    msgHandleValid: "Valid nickname: {handle}",
-    msgHandleNotFound: "Nickname does not exist.",
-    msgHandleNetwork: "Network error occurred.",
-    msgHandleRateLimited: "API rate limit reached. Please try again later.",
-    msgHandleUnknown: "Failed to validate nickname.",
-    msgResetTodayConfirm:
-      "Reset Today: today problem, reroll count, solved status, and last check time will reset. Continue?",
-    msgFactoryConfirm:
-      "Factory Reset: all settings + local state (history/logs/today state) will be deleted. Continue?"
-  },
-  ko: {
-    optTitle: "BOJ Forcer 설정",
-    lblUiLanguage: "언어",
-    lblTheme: "테마",
-    optThemeVivid: "기본 비주얼",
-    optThemeDark: "다크",
-    optThemeLight: "라이트",
-    secAccount: "계정",
-    lblHandle: "닉네임 (solved.ac 핸들)",
-    btnCheck: "확인",
-    secFilter: "문제 필터",
-    lblLevelMin: "최소 티어",
-    lblLevelMax: "최대 티어",
-    lblLangKo: "한국어",
-    lblLangEn: "영어",
-    lblReqSolvable: "풀 수 있는 문제만 (o?true)",
-    lblExcludeWarnings: "경고 제외 (w?false)",
-    hintReqSolvable: "solved.ac에서 풀이 가능으로 표시된 문제만 선택합니다.",
-    hintExcludeWarnings: "경고가 붙은 문제를 제외합니다.",
-    lblMinSolvedCount: "최소 해결 수",
-    lblTags: "문제 태그",
-    hintTags: "기본값은 모두 선택입니다. 제외할 태그만 체크 해제하세요.",
-    secWhitelist: "화이트리스트",
-    lblWhitelist: "도메인 목록",
-    secLimits: "제한",
-    lblRerollLimit: "하루 변경 횟수",
-    lblEmergencyHours: "Emergency 시간",
-    lblAutoRecheck: "자동 검사",
-    secDebug: "디버그",
-    lblDebugMode: "디버그 모드",
-    lblDebugDate: "디버그 날짜 (YYYY-MM-DD)",
-    hintDebugMode: "테스트용으로 로그가 늘고 쿨다운/재시도 간격이 짧아집니다.",
-    btnResetToday: "오늘 초기화",
-    btnFactoryReset: "전체 초기화",
-    msgAutoSaving: "자동 저장 중...",
-    msgAutoSaved: "자동 저장됨",
-    msgChecking: "확인 중...",
-    msgHandleRequired: "닉네임을 입력하세요.",
-    msgResetTodayConfirm: "오늘 상태(문제/리롤/완료/검사시간)를 초기화합니다. 진행할까요?",
-    msgFactoryConfirm: "설정과 로컬 상태(히스토리/로그/오늘 상태)를 모두 삭제합니다. 진행할까요?"
-  }
+const EN = {
+  optTitle: "BOJ Forcer Settings",
+  lblUiLanguage: "Language",
+  lblTheme: "Theme",
+  optThemeVivid: "Vivid",
+  optThemeDark: "Dark",
+  optThemeLight: "Light",
+  secAccount: "Account",
+  lblHandle: "Nickname (solved.ac handle)",
+  btnCheck: "Check",
+  secFilter: "Problem Filter",
+  lblLevelMin: "Min Tier",
+  lblLevelMax: "Max Tier",
+  lblLangKo: "Language KO",
+  lblLangEn: "Language EN",
+  lblReqSolvable: "Require Solvable (o?true)",
+  lblExcludeWarnings: "Exclude Warnings (w?false)",
+  hintReqSolvable: "Only pick problems currently marked solvable on solved.ac.",
+  hintExcludeWarnings: "Exclude warning-marked problems.",
+  lblMinSolvedCount: "Min Solved Count",
+  lblTags: "Problem Tags",
+  hintTags: "Default is all selected. Search tags, then uncheck to exclude or switch to include mode.",
+  tagSearchPlaceholder: "Search tags (e.g., graph, dp)",
+  btnTagSelectAll: "Select All",
+  btnTagClearAll: "Clear All",
+  btnTagShowMore: "Show More",
+  btnTagShowLess: "Show Less",
+  tagModeAll: "Mode: all selected (uncheck to exclude)",
+  tagModeNone: "Mode: all cleared (check to include)",
+  tagSearchEmpty: "No tags match your search.",
+  secWhitelist: "Whitelist",
+  lblWhitelist: "Domain List",
+  secLimits: "Limits",
+  lblRerollLimit: "Today Change Per Day",
+  lblEmergencyHours: "Emergency Hours",
+  lblAutoRecheck: "Auto Check",
+  secDebug: "Debug",
+  lblDebugMode: "Debug Mode",
+  lblDebugDate: "Debug Date (YYYY-MM-DD)",
+  hintDebugMode: "Shows richer logs and uses shorter cooldown/retry intervals for testing.",
+  btnResetToday: "Reset Today",
+  btnFactoryReset: "Factory Reset",
+  msgAutoSaving: "Auto-saving...",
+  msgAutoSaved: "Auto-saved",
+  msgChecking: "Checking...",
+  msgHandleRequired: "Enter nickname first.",
+  msgHandleValid: "Valid nickname: {handle}",
+  msgHandleNotFound: "Nickname does not exist.",
+  msgHandleNetwork: "Network error occurred.",
+  msgHandleRateLimited: "API rate limit reached. Please try again later.",
+  msgHandleUnknown: "Failed to validate nickname.",
+  msgResetTodayConfirm:
+    "Reset Today: today problem, reroll count, solved status, and last check time will reset. Continue?",
+  msgFactoryConfirm:
+    "Factory Reset: all settings + local state (history/logs/today state) will be deleted. Continue?"
 };
 
-const TAG_CHOICES = [
-  { id: "implementation", en: "Implementation", ko: "구현" },
-  { id: "data_structures", en: "Data Structures", ko: "자료구조" },
-  { id: "dp", en: "DP", ko: "동적 계획법" },
-  { id: "graphs", en: "Graph", ko: "그래프" },
-  { id: "graph_traversal", en: "Graph Traversal", ko: "그래프 탐색" },
-  { id: "greedy", en: "Greedy", ko: "그리디" },
-  { id: "math", en: "Math", ko: "수학" },
-  { id: "string", en: "String", ko: "문자열" },
-  { id: "bruteforcing", en: "Bruteforce", ko: "브루트포스" },
-  { id: "sorting", en: "Sorting", ko: "정렬" },
-  { id: "binary_search", en: "Binary Search", ko: "이분 탐색" },
-  { id: "shortest_path", en: "Shortest Path", ko: "최단 경로" },
-  { id: "tree", en: "Tree", ko: "트리" },
-  { id: "ad_hoc", en: "Ad-hoc", ko: "애드혹" },
-  { id: "simulation", en: "Simulation", ko: "시뮬레이션" },
-  { id: "prefix_sum", en: "Prefix Sum", ko: "누적 합" },
-  { id: "two_pointer", en: "Two Pointers", ko: "투 포인터" }
+const I18N = {
+  en: EN,
+  ko: { ...EN }
+};
+
+const FALLBACK_TAG_CHOICES = [
+  { id: "implementation", en: "Implementation", ko: "Implementation" },
+  { id: "data_structures", en: "Data Structures", ko: "Data Structures" },
+  { id: "dp", en: "Dynamic Programming", ko: "Dynamic Programming" },
+  { id: "graphs", en: "Graph Theory", ko: "Graph Theory" },
+  { id: "graph_traversal", en: "Graph Traversal", ko: "Graph Traversal" },
+  { id: "greedy", en: "Greedy", ko: "Greedy" },
+  { id: "math", en: "Mathematics", ko: "Mathematics" },
+  { id: "string", en: "String", ko: "String" },
+  { id: "bruteforcing", en: "Bruteforcing", ko: "Bruteforcing" },
+  { id: "sorting", en: "Sorting", ko: "Sorting" },
+  { id: "binary_search", en: "Binary Search", ko: "Binary Search" },
+  { id: "shortest_path", en: "Shortest Path", ko: "Shortest Path" },
+  { id: "trees", en: "Tree", ko: "Tree" },
+  { id: "ad_hoc", en: "Ad-hoc", ko: "Ad-hoc" },
+  { id: "simulation", en: "Simulation", ko: "Simulation" },
+  { id: "prefix_sum", en: "Prefix Sum", ko: "Prefix Sum" },
+  { id: "two_pointer", en: "Two Pointer", ko: "Two Pointer" }
 ];
 
-const $ = (id) => document.getElementById(id);
+const TAG_CATALOG_CACHE_KEY = "tagCatalogCacheV1";
+const TAG_CATALOG_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const TAG_CATALOG_RETRY_BACKOFF_MS = 12 * 60 * 60 * 1000;
+const TAG_COLLAPSED_VISIBLE_COUNT = 60;
+const TAG_SELECTION_BASES = new Set(["all", "none"]);
 const THEME_VALUES = new Set(["vivid", "dark", "light"]);
+const $ = (id) => document.getElementById(id);
 
 const els = {
   optTitle: $("optTitle"),
@@ -149,7 +125,13 @@ const els = {
   minSolvedCount: $("minSolvedCount"),
   lblTags: $("lblTags"),
   hintTags: $("hintTags"),
+  tagSearch: $("tagSearch"),
+  btnTagSelectAll: $("btnTagSelectAll"),
+  btnTagClearAll: $("btnTagClearAll"),
+  btnTagExpand: $("btnTagExpand"),
+  tagModeHint: $("tagModeHint"),
   tagList: $("tagList"),
+  tagSearchEmpty: $("tagSearchEmpty"),
   secWhitelist: $("secWhitelist"),
   lblWhitelist: $("lblWhitelist"),
   whitelist: $("whitelist"),
@@ -172,6 +154,11 @@ const els = {
 };
 
 let tagChecks = new Map();
+let tagCatalog = [];
+let tagCatalogById = new Map();
+let tagSelectionBase = "all";
+let isTagListExpanded = false;
+let lastMatchedTagCount = 0;
 let isHydrating = false;
 let saveTimer = null;
 let persistedHandle = "";
@@ -196,18 +183,95 @@ function formatTemplate(message, values = {}) {
   return Object.entries(values).reduce((out, [key, value]) => out.replace(`{${key}}`, String(value ?? "")), message);
 }
 
-function getHandleValidationErrorMessage(locale, errorCode) {
-  const isKo = locale === "ko";
-  if (errorCode === "not_found") return isKo ? "존재하지 않는 닉네임입니다." : t(locale, "msgHandleNotFound");
-  if (errorCode === "rate_limited") return isKo ? "API 요청 제한 중입니다." : t(locale, "msgHandleRateLimited");
-  if (errorCode === "offline_or_cors" || errorCode === "timeout") {
-    return isKo ? "네트워크 오류가 발생했습니다." : t(locale, "msgHandleNetwork");
+function normalizeTagId(rawTag) {
+  const tag = String(rawTag || "").trim().toLowerCase();
+  if (!tag) return "";
+  if (tag === "tree") return "trees";
+  return tag;
+}
+
+function normalizeTagIds(rawTags) {
+  const out = [];
+  const seen = new Set();
+  for (const raw of Array.isArray(rawTags) ? rawTags : []) {
+    const id = normalizeTagId(raw);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
   }
+  return out;
+}
+
+function normalizeTagChoice(rawChoice) {
+  const id = normalizeTagId(rawChoice?.id || rawChoice?.key);
+  if (!id) return null;
+  const en = String(rawChoice?.en || rawChoice?.name || id).trim() || id;
+  const ko = String(rawChoice?.ko || rawChoice?.name || en).trim() || en;
+  return { id, en, ko };
+}
+
+function normalizeTagChoices(rawChoices) {
+  const map = new Map();
+  for (const raw of Array.isArray(rawChoices) ? rawChoices : []) {
+    const choice = normalizeTagChoice(raw);
+    if (!choice || map.has(choice.id)) continue;
+    map.set(choice.id, choice);
+  }
+  return Array.from(map.values());
+}
+
+function normalizeTagCatalogCache(rawCache) {
+  if (!rawCache || typeof rawCache !== "object") return null;
+  const tags = normalizeTagChoices(rawCache.tags);
+  if (!tags.length) return null;
+  const updatedAt = Number(rawCache.updatedAt || 0);
+  const lastFetchFailedAt = Number(rawCache.lastFetchFailedAt || 0);
+  return {
+    updatedAt: Number.isFinite(updatedAt) && updatedAt > 0 ? updatedAt : 0,
+    lastFetchFailedAt: Number.isFinite(lastFetchFailedAt) && lastFetchFailedAt > 0 ? lastFetchFailedAt : 0,
+    tags
+  };
+}
+
+function shouldRefreshTagCatalog(cache, nowTs = Date.now()) {
+  if (!cache) return true;
+  const isFresh = cache.updatedAt > 0 && nowTs - cache.updatedAt < TAG_CATALOG_CACHE_TTL_MS;
+  if (isFresh) return false;
+  const failedRecently = cache.lastFetchFailedAt > 0 && nowTs - cache.lastFetchFailedAt < TAG_CATALOG_RETRY_BACKOFF_MS;
+  if (failedRecently) return false;
+  return true;
+}
+
+async function getTagCatalogCache() {
+  try {
+    const data = await chrome.storage.local.get(TAG_CATALOG_CACHE_KEY);
+    return normalizeTagCatalogCache(data?.[TAG_CATALOG_CACHE_KEY]);
+  } catch {
+    return null;
+  }
+}
+
+async function setTagCatalogCache(tags, options = {}) {
+  const normalizedTags = normalizeTagChoices(tags);
+  if (!normalizedTags.length) return;
+  const hasUpdatedAt = Object.prototype.hasOwnProperty.call(options, "updatedAt");
+  const requestedUpdatedAt = Number(options.updatedAt);
+  const payload = {
+    updatedAt: hasUpdatedAt && Number.isFinite(requestedUpdatedAt) ? Math.max(0, requestedUpdatedAt) : Date.now(),
+    lastFetchFailedAt: Number(options.lastFetchFailedAt || 0),
+    tags: normalizedTags
+  };
+  await chrome.storage.local.set({ [TAG_CATALOG_CACHE_KEY]: payload });
+}
+
+function getHandleValidationErrorMessage(locale, errorCode) {
+  if (errorCode === "not_found") return t(locale, "msgHandleNotFound");
+  if (errorCode === "rate_limited") return t(locale, "msgHandleRateLimited");
+  if (errorCode === "offline_or_cors" || errorCode === "timeout") return t(locale, "msgHandleNetwork");
   return t(locale, "msgHandleUnknown");
 }
 
 function getHandleValidationSuccessMessage(locale, handle) {
-  if (locale === "ko") return `유효한 닉네임입니다: ${handle}`;
   return formatTemplate(t(locale, "msgHandleValid"), { handle });
 }
 
@@ -239,6 +303,12 @@ function tierOptionsInit() {
   }
 }
 
+function getTagLabel(tag, locale) {
+  if (!tag) return "";
+  if (locale === "ko") return tag.ko || tag.en || tag.id;
+  return tag.en || tag.ko || tag.id;
+}
+
 function createTagCheckbox(tag) {
   const label = document.createElement("label");
   label.className = "tagItem";
@@ -248,6 +318,10 @@ function createTagCheckbox(tag) {
   input.type = "checkbox";
   input.dataset.tag = tag.id;
   input.checked = true;
+  input.addEventListener("change", () => {
+    refreshTagSelectionUi();
+    scheduleAutoSave();
+  });
 
   const text = document.createElement("span");
   text.dataset.role = "tagText";
@@ -258,55 +332,217 @@ function createTagCheckbox(tag) {
 }
 
 function updateTagTexts(locale) {
-  const langKey = locale === "ko" ? "ko" : "en";
-  const tagMap = new Map(TAG_CHOICES.map((tag) => [tag.id, tag[langKey] || tag.en]));
   const labels = els.tagList.querySelectorAll(".tagItem");
   labels.forEach((label) => {
     const tagId = label.dataset.tagId;
+    const tag = tagCatalogById.get(tagId);
     const text = label.querySelector('[data-role="tagText"]');
-    if (text) text.textContent = tagMap.get(tagId) || tagId;
+    if (text) text.textContent = getTagLabel(tag, locale) || tagId;
+    label.dataset.search = `${tagId} ${tag?.en || ""} ${tag?.ko || ""}`.trim().toLowerCase();
   });
 }
 
-function initTagList() {
+function renderTagList() {
   tagChecks = new Map();
   els.tagList.innerHTML = "";
-  for (const tag of TAG_CHOICES) {
+  for (const tag of tagCatalog) {
     const item = createTagCheckbox(tag);
-    item.input.addEventListener("change", scheduleAutoSave);
     tagChecks.set(tag.id, item.input);
     els.tagList.appendChild(item.label);
   }
   updateTagTexts(currentLocale());
 }
 
-function setAllTagsChecked() {
-  for (const input of tagChecks.values()) input.checked = true;
+function appendMissingTagChoices(includeTags, excludeTags) {
+  const merged = [...normalizeTagIds(includeTags), ...normalizeTagIds(excludeTags)];
+  const missing = merged.filter((id) => !tagCatalogById.has(id));
+  if (!missing.length) return;
+
+  for (const id of missing) {
+    const extra = { id, en: id, ko: id };
+    tagCatalog.push(extra);
+    tagCatalogById.set(id, extra);
+
+    const item = createTagCheckbox(extra);
+    tagChecks.set(extra.id, item.input);
+    els.tagList.appendChild(item.label);
+  }
+  updateTagTexts(currentLocale());
 }
 
-function fillTagSelections(includeTags, excludeTags) {
-  const include = new Set(Array.isArray(includeTags) ? includeTags : []);
-  const exclude = new Set(Array.isArray(excludeTags) ? excludeTags : []);
+function setAllTagsChecked(checked) {
+  for (const input of tagChecks.values()) {
+    input.checked = checked;
+  }
+}
 
-  if (include.size > 0) {
-    for (const [tagId, input] of tagChecks.entries()) {
-      input.checked = include.has(tagId);
+function getTagCheckedCount() {
+  let checked = 0;
+  for (const input of tagChecks.values()) {
+    if (input.checked) checked += 1;
+  }
+  return checked;
+}
+
+function applyTagSearchFilter() {
+  const q = String(els.tagSearch.value || "").trim().toLowerCase();
+  const labels = els.tagList.querySelectorAll(".tagItem");
+  const matchedLabels = [];
+
+  labels.forEach((label) => {
+    const haystack = String(label.dataset.search || "");
+    const matched = !q || haystack.includes(q);
+    label.classList.toggle("isHidden", !matched);
+    label.classList.remove("isCollapsedHidden");
+    if (matched) matchedLabels.push(label);
+  });
+
+  lastMatchedTagCount = matchedLabels.length;
+  if (!isTagListExpanded && matchedLabels.length > TAG_COLLAPSED_VISIBLE_COUNT) {
+    for (let i = TAG_COLLAPSED_VISIBLE_COUNT; i < matchedLabels.length; i += 1) {
+      matchedLabels[i].classList.add("isCollapsedHidden");
     }
-    return;
   }
 
-  setAllTagsChecked();
-  for (const [tagId, input] of tagChecks.entries()) {
-    if (exclude.has(tagId)) input.checked = false;
-  }
+  const showEmpty = q.length > 0 && matchedLabels.length === 0;
+  els.tagSearchEmpty.classList.toggle("isHidden", !showEmpty);
+  refreshTagExpandUi();
 }
 
-function selectedExcludedTags() {
-  const out = [];
-  for (const [tagId, input] of tagChecks.entries()) {
-    if (!input.checked) out.push(tagId);
+function setTagListExpanded(expanded) {
+  isTagListExpanded = Boolean(expanded);
+  els.tagList.classList.toggle("isCollapsed", !isTagListExpanded);
+  applyTagSearchFilter();
+}
+
+function refreshTagExpandUi() {
+  const locale = currentLocale();
+  const canExpand = lastMatchedTagCount > TAG_COLLAPSED_VISIBLE_COUNT;
+  if (!canExpand) {
+    isTagListExpanded = false;
+    els.tagList.classList.add("isCollapsed");
   }
-  return out;
+  els.btnTagExpand.classList.toggle("isHidden", !canExpand);
+  els.btnTagExpand.textContent = isTagListExpanded ? t(locale, "btnTagShowLess") : t(locale, "btnTagShowMore");
+}
+
+function refreshTagSelectionUi() {
+  const locale = currentLocale();
+  const checked = getTagCheckedCount();
+  const total = tagChecks.size;
+
+  els.btnTagSelectAll.textContent = t(locale, "btnTagSelectAll");
+  els.btnTagClearAll.textContent = t(locale, "btnTagClearAll");
+  els.tagSearch.placeholder = t(locale, "tagSearchPlaceholder");
+  els.tagSearchEmpty.textContent = t(locale, "tagSearchEmpty");
+  els.tagModeHint.textContent =
+    `${tagSelectionBase === "all" ? t(locale, "tagModeAll") : t(locale, "tagModeNone")} (${checked}/${total})`;
+  refreshTagExpandUi();
+}
+
+function fillTagSelections(includeTags, excludeTags, savedSelectionBase = "all") {
+  appendMissingTagChoices(includeTags, excludeTags);
+
+  const include = new Set(normalizeTagIds(includeTags));
+  const exclude = new Set(normalizeTagIds(excludeTags));
+
+  let base = TAG_SELECTION_BASES.has(savedSelectionBase) ? savedSelectionBase : "all";
+  if (include.size > 0) base = "none";
+  if (include.size === 0 && exclude.size > 0) base = "all";
+
+  tagSelectionBase = base;
+
+  if (tagSelectionBase === "none") {
+    setAllTagsChecked(false);
+    for (const id of include) {
+      const input = tagChecks.get(id);
+      if (input) input.checked = true;
+    }
+  } else {
+    setAllTagsChecked(true);
+    for (const id of exclude) {
+      const input = tagChecks.get(id);
+      if (input) input.checked = false;
+    }
+  }
+
+  refreshTagSelectionUi();
+  applyTagSearchFilter();
+}
+
+function collectTagFilters() {
+  const checked = [];
+  const unchecked = [];
+
+  for (const [tagId, input] of tagChecks.entries()) {
+    if (input.checked) checked.push(tagId);
+    else unchecked.push(tagId);
+  }
+
+  if (tagSelectionBase === "none") {
+    return {
+      tagSelectionBase: "none",
+      includeTags: checked,
+      excludeTags: []
+    };
+  }
+
+  return {
+    tagSelectionBase: "all",
+    includeTags: [],
+    excludeTags: unchecked
+  };
+}
+
+function mergeTagChoices(rawChoices, includeTags, excludeTags) {
+  const map = new Map(normalizeTagChoices(rawChoices).map((choice) => [choice.id, choice]));
+
+  const selected = [...normalizeTagIds(includeTags), ...normalizeTagIds(excludeTags)];
+  for (const id of selected) {
+    if (map.has(id)) continue;
+    map.set(id, { id, en: id, ko: id });
+  }
+
+  return Array.from(map.values());
+}
+
+async function initTagList(filters = DEFAULT_SETTINGS.filters) {
+  const includeTags = normalizeTagIds(filters?.includeTags);
+  const excludeTags = normalizeTagIds(filters?.excludeTags);
+  const nowTs = Date.now();
+  const cache = await getTagCatalogCache();
+  const baseChoices = cache?.tags?.length ? cache.tags : FALLBACK_TAG_CHOICES;
+
+  tagCatalog = mergeTagChoices(baseChoices, includeTags, excludeTags);
+  tagCatalogById = new Map(tagCatalog.map((tag) => [tag.id, tag]));
+
+  renderTagList();
+  fillTagSelections(includeTags, excludeTags, filters?.tagSelectionBase);
+
+  if (!shouldRefreshTagCatalog(cache, nowTs)) return;
+
+  try {
+    const latest = normalizeTagChoices(await getTagChoices());
+    if (!latest.length) return;
+
+    await setTagCatalogCache(latest, { lastFetchFailedAt: 0 });
+    tagCatalog = mergeTagChoices(latest, includeTags, excludeTags);
+    tagCatalogById = new Map(tagCatalog.map((tag) => [tag.id, tag]));
+    renderTagList();
+    fillTagSelections(includeTags, excludeTags, filters?.tagSelectionBase);
+  } catch {
+    if (cache?.tags?.length) {
+      await setTagCatalogCache(cache.tags, {
+        updatedAt: cache.updatedAt,
+        lastFetchFailedAt: nowTs
+      });
+      return;
+    }
+    await setTagCatalogCache(FALLBACK_TAG_CHOICES, {
+      updatedAt: 0,
+      lastFetchFailedAt: nowTs
+    });
+  }
 }
 
 function applyLocale(locale) {
@@ -344,7 +580,10 @@ function applyLocale(locale) {
   els.lblDebugDate.textContent = t(l, "lblDebugDate");
   els.btnResetToday.textContent = t(l, "btnResetToday");
   els.btnFactoryReset.textContent = t(l, "btnFactoryReset");
+
   updateTagTexts(l);
+  refreshTagSelectionUi();
+  applyTagSearchFilter();
 }
 
 function fillForm(settings, options = {}) {
@@ -367,7 +606,7 @@ function fillForm(settings, options = {}) {
     els.requireSolvable.checked = settings.filters.requireSolvable;
     els.excludeWarnings.checked = settings.filters.excludeWarnings;
     els.minSolvedCount.value = String(Math.max(1, Number(settings.filters.minSolvedCount || 1)));
-    fillTagSelections(settings.filters.includeTags, settings.filters.excludeTags);
+    fillTagSelections(settings.filters.includeTags, settings.filters.excludeTags, settings.filters.tagSelectionBase);
     els.whitelist.value = settings.whitelist.join("\n");
     els.rerollLimitPerDay.value = String(settings.rerollLimitPerDay);
     els.emergencyHours.value = String(settings.emergencyHours);
@@ -383,6 +622,8 @@ function collectForm(options = {}) {
   const includeHandle = options.includeHandle === true;
   const handleOverride = typeof options.handleOverride === "string" ? options.handleOverride : null;
   const handleValue = includeHandle ? handleOverride ?? els.handle.value.trim() : persistedHandle;
+  const tagFilters = collectTagFilters();
+
   const settings = {
     ...DEFAULT_SETTINGS,
     handle: handleValue,
@@ -395,8 +636,9 @@ function collectForm(options = {}) {
       requireSolvable: els.requireSolvable.checked,
       excludeWarnings: els.excludeWarnings.checked,
       minSolvedCount: Math.max(1, Number(els.minSolvedCount.value || 1)),
-      includeTags: [],
-      excludeTags: selectedExcludedTags()
+      tagSelectionBase: tagFilters.tagSelectionBase,
+      includeTags: tagFilters.includeTags,
+      excludeTags: tagFilters.excludeTags
     },
     whitelist: parseDomainList(els.whitelist.value),
     rerollLimitPerDay: Number(els.rerollLimitPerDay.value || 0),
@@ -405,6 +647,7 @@ function collectForm(options = {}) {
     debugMode: els.debugMode.checked,
     debugDateKST: els.debugDateKST.value.trim() || null
   };
+
   return normalizeSettings(settings);
 }
 
@@ -412,10 +655,12 @@ async function saveNow(options = {}) {
   const includeHandle = options.includeHandle === true;
   const handleOverride = typeof options.handleOverride === "string" ? options.handleOverride : null;
   const locale = currentLocale();
+
   els.saveMsg.textContent = t(locale, "msgAutoSaving");
   const settings = collectForm({ includeHandle, handleOverride });
   const res = await send("SAVE_SETTINGS", { settings });
   if (!res?.ok) throw new Error(res?.error || "save_failed");
+
   fillForm(res.snapshot.settings, { preserveHandleDraft: !includeHandle });
   els.saveMsg.textContent = t(locale, "msgAutoSaved");
 }
@@ -465,12 +710,43 @@ function bindAutoSaveInputs() {
   });
 }
 
+function bindTagControls() {
+  els.tagSearch.addEventListener("input", applyTagSearchFilter);
+
+  els.btnTagSelectAll.addEventListener("click", () => {
+    tagSelectionBase = "all";
+    setAllTagsChecked(true);
+    refreshTagSelectionUi();
+    applyTagSearchFilter();
+    scheduleAutoSave();
+  });
+
+  els.btnTagClearAll.addEventListener("click", () => {
+    tagSelectionBase = "none";
+    setAllTagsChecked(false);
+    refreshTagSelectionUi();
+    applyTagSearchFilter();
+    scheduleAutoSave();
+  });
+
+  els.btnTagExpand.addEventListener("click", () => {
+    setTagListExpanded(!isTagListExpanded);
+  });
+
+  window.addEventListener("resize", () => {
+    applyTagSearchFilter();
+  });
+}
+
 async function load() {
   tierOptionsInit();
-  initTagList();
   bindAutoSaveInputs();
+  bindTagControls();
+
   const res = await send("GET_SNAPSHOT");
   if (!res?.ok) throw new Error(res?.error || "load_failed");
+
+  await initTagList(res.snapshot.settings?.filters || DEFAULT_SETTINGS.filters);
   fillForm(res.snapshot.settings);
   els.saveMsg.textContent = t(currentLocale(), "msgAutoSaved");
 }
@@ -501,18 +777,21 @@ els.btnValidateHandle.addEventListener("click", async () => {
     els.handleCheckMsg.textContent = t(locale, "msgHandleRequired");
     return;
   }
+
   els.handleCheckMsg.textContent = t(locale, "msgChecking");
   const res = await send("VALIDATE_HANDLE", { handle });
   if (!res?.ok) {
     els.handleCheckMsg.textContent = getHandleValidationErrorMessage(locale, String(res?.error || ""));
     return;
   }
+
   const normalizedHandle = String(res.user?.handle || handle);
   const tierRange = getTierRangeFromUserTier(res.user?.tier);
   if (tierRange) {
     els.levelMin.value = String(tierRange.levelMin);
     els.levelMax.value = String(tierRange.levelMax);
   }
+
   try {
     await saveNow({ includeHandle: true, handleOverride: normalizedHandle });
     els.handleCheckMsg.textContent = getHandleValidationSuccessMessage(locale, normalizedHandle);

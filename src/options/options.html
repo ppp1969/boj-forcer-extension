@@ -70,7 +70,19 @@
 
         <p id="lblTags" class="label">Problem Tags</p>
         <p id="hintTags" class="hint"></p>
-        <div id="tagList" class="tagGrid"></div>
+        <div class="tagToolbar">
+          <input id="tagSearch" class="field mono tagSearchInput" placeholder="Search tags" />
+          <div class="tagActionRow">
+            <button id="btnTagSelectAll" class="btn tagActionBtn" type="button">Select All</button>
+            <button id="btnTagClearAll" class="btn tagActionBtn" type="button">Clear All</button>
+          </div>
+        </div>
+        <p id="tagModeHint" class="hint"></p>
+        <div id="tagList" class="tagGrid isCollapsed"></div>
+        <div class="tagExpandRow">
+          <button id="btnTagExpand" class="btn tagExpandBtn" type="button">Show More</button>
+        </div>
+        <p id="tagSearchEmpty" class="hint tagSearchEmpty isHidden">No tags match your search.</p>
       </section>
 
       <section class="card section">
