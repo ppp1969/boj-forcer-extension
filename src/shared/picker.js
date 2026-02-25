@@ -84,12 +84,12 @@ function hashString(input) {
   return (h >>> 0) || 1;
 }
 
-export function pickDeterministicProblemId(candidates, dateKST, rerollUsed = 0) {
+export function pickDeterministicProblemId(candidates, dateKST, rerollUsed = 0, autoAdvanceUsed = 0) {
   const list = Array.from(new Set((Array.isArray(candidates) ? candidates : []).map((v) => Number(v))))
     .filter((v) => Number.isInteger(v) && v > 0)
     .sort((a, b) => a - b);
   if (!list.length) return 0;
-  const seed = `${dateKST}:${rerollUsed}`;
+  const seed = `${dateKST}:${rerollUsed}:${autoAdvanceUsed}`;
   const idx = hashString(seed) % list.length;
   return list[idx];
 }

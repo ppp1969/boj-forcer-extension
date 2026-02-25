@@ -49,6 +49,16 @@ function isEmergencyActive(dailyState) {
   return Number(dailyState.emergencyUntil || 0) > now();
 }
 
+function isDayCompleted(dailyState) {
+  return Boolean(dailyState.doneToday ?? dailyState.solved);
+}
+
+function setDayCompleted(dailyState, doneToday) {
+  const normalized = Boolean(doneToday);
+  dailyState.doneToday = normalized;
+  dailyState.solved = normalized;
+}
+
 function isSkippableUrl(url) {
   if (!url) return true;
   return (
@@ -70,7 +80,7 @@ function isWhitelisted(url, whitelist) {
 
 function getStatus(dailyState) {
   if (isEmergencyActive(dailyState)) return "EMERGENCY";
-  if (dailyState.solved) return "DONE";
+  if (isDayCompleted(dailyState)) return "DONE";
   return "PENDING";
 }
 
@@ -91,7 +101,7 @@ async function setBadge(dailyState) {
 function recomputeStreak(dailyState, todayDateKST) {
   const stats = computeStats(dailyState, todayDateKST);
   dailyState.streak = stats.streak;
-  if (dailyState.solved) dailyState.lastDoneDateKST = todayDateKST;
+  if (isDayCompleted(dailyState)) dailyState.lastDoneDateKST = todayDateKST;
 }
 
 function buildCandidatePoolKey(query) {
@@ -183,16 +193,28 @@ async function ensureCandidatePool(settings, dailyState, { forceRefresh = false 
   }
 }
 
-async function pickProblem(settings, dailyState, dateKST, rerollUsed) {
+async function pickProblem(
+  settings,
+  dailyState,
+  dateKST,
+  { rerollUsed = 0, autoAdvanceUsed = 0, avoidProblemId = 0 } = {}
+) {
   const pool = await ensureCandidatePool(settings, dailyState);
   const ids = pool.candidates.map((item) => item.problemId);
-  if (!ids.length) {
+  const uniqueIds = Array.from(new Set(ids.map((id) => Number(id))))
+    .filter((id) => Number.isInteger(id) && id > 0)
+    .sort((a, b) => a - b);
+  if (!uniqueIds.length) {
     const err = new Error("No candidate problems from current filters.");
     err.code = "no_candidates";
     throw err;
   }
 
-  const problemId = pickDeterministicProblemId(ids, dateKST, rerollUsed);
+  let problemId = pickDeterministicProblemId(uniqueIds, dateKST, rerollUsed, autoAdvanceUsed);
+  if (avoidProblemId > 0 && uniqueIds.length > 1 && problemId === avoidProblemId) {
+    const idx = uniqueIds.findIndex((id) => id === problemId);
+    problemId = uniqueIds[(idx + 1) % uniqueIds.length];
+  }
   const chosen = pool.candidates.find((item) => item.problemId === problemId);
   return {
     problemId,
@@ -207,6 +229,15 @@ async function pickProblem(settings, dailyState, dateKST, rerollUsed) {
   };
 }
 
+function applyPickedProblem(dailyState, picked) {
+  dailyState.todayProblemId = picked.problemId;
+  dailyState.todayProblemLevel = picked.level;
+  dailyState.todayProblemTitleKo = picked.titleKo;
+  dailyState.todayProblemTitleEn = picked.titleEn;
+  dailyState.pickedFromQuery = picked.query;
+  dailyState.currentProblemSolved = false;
+}
+
 function createFreshDaily(dateKST, prev) {
   let history = Array.isArray(prev?.history) ? prev.history : [];
   if (prev?.dateKST && prev?.todayProblemId > 0) {
@@ -215,7 +246,7 @@ function createFreshDaily(dateKST, prev) {
     history = upsertHistory(history, {
       dateKST: prev.dateKST,
       problemId: keepExistingDone ? Number(existing.problemId) : prev.todayProblemId,
-      done: keepExistingDone || Boolean(prev.solved)
+      done: keepExistingDone || isDayCompleted(prev)
     });
   }
   return normalizeDailyState({
@@ -254,6 +285,7 @@ async function ensureDailyState({ forceRepick = false } = {}) {
       daily.todayProblemTitleKo = "";
       daily.todayProblemTitleEn = "";
       daily.pickedFromQuery = "";
+      daily.currentProblemSolved = false;
       daily.lastApiError = "missing_handle";
       daily.candidatePoolKey = "";
       daily.candidatePoolUpdatedAt = 0;
@@ -261,12 +293,11 @@ async function ensureDailyState({ forceRepick = false } = {}) {
       changed = true;
     } else if (forceRepick || !daily.todayProblemId) {
       try {
-        const picked = await pickProblem(settings, daily, todayDateKST, daily.rerollUsed);
-        daily.todayProblemId = picked.problemId;
-        daily.todayProblemLevel = picked.level;
-        daily.todayProblemTitleKo = picked.titleKo;
-        daily.todayProblemTitleEn = picked.titleEn;
-        daily.pickedFromQuery = picked.query;
+        const picked = await pickProblem(settings, daily, todayDateKST, {
+          rerollUsed: daily.rerollUsed,
+          autoAdvanceUsed: daily.autoAdvanceUsed
+        });
+        applyPickedProblem(daily, picked);
         daily.lastApiError = "";
         if (picked.poolPartialFailure) {
           await log("warn", "Candidate pool fetched with partial failure", { query: picked.query });
@@ -281,6 +312,7 @@ async function ensureDailyState({ forceRepick = false } = {}) {
         daily.todayProblemTitleKo = "";
         daily.todayProblemTitleEn = "";
         daily.pickedFromQuery = buildProblemQuery(settings);
+        daily.currentProblemSolved = false;
         daily.lastApiError = classifyError(err) === "no_candidates" ? "no_candidates" : classifyError(err);
         changed = true;
         await log("warn", "Problem pick failed", { code: classifyError(err) });
@@ -312,7 +344,7 @@ function maybeScheduleAutoRecheck(settings, daily) {
   clearAutoTimer();
   if (!settings.autoRecheck) return;
   if (!settings.handle || !daily.todayProblemId) return;
-  if (daily.solved || isEmergencyActive(daily)) return;
+  if (isDayCompleted(daily) || isEmergencyActive(daily)) return;
   if (autoRetryAttempt >= MAX_AUTO_RECHECK) return;
 
   const delays = settings.debugMode ? DEBUG_AUTO_RECHECK_DELAYS_MS : AUTO_RECHECK_DELAYS_MS;
@@ -329,25 +361,54 @@ async function performSolvedCheck(trigger = "manual") {
     const { settings, daily, todayDateKST } = await ensureDailyState();
     if (!settings.handle || !daily.todayProblemId) return { ok: false, reason: "not_ready" };
 
-    const solved = await checkSolved(settings.handle, daily.todayProblemId);
+    const solvedProblemId = daily.todayProblemId;
+    const solved = await checkSolved(settings.handle, solvedProblemId);
     daily.lastSolvedCheckAt = now();
     if (solved) {
-      daily.solved = true;
+      setDayCompleted(daily, true);
+      daily.currentProblemSolved = true;
       daily.history = upsertHistory(daily.history, {
         dateKST: todayDateKST,
-        problemId: daily.todayProblemId,
+        problemId: solvedProblemId,
         done: true
       });
       daily.lastApiError = "";
+
+      const nextAutoAdvanceUsed = Number(daily.autoAdvanceUsed || 0) + 1;
+      try {
+        const picked = await pickProblem(settings, daily, todayDateKST, {
+          rerollUsed: daily.rerollUsed,
+          autoAdvanceUsed: nextAutoAdvanceUsed,
+          avoidProblemId: solvedProblemId
+        });
+        applyPickedProblem(daily, picked);
+        daily.autoAdvanceUsed = nextAutoAdvanceUsed;
+        if (picked.poolPartialFailure) {
+          await log("warn", "Candidate pool fetched with partial failure", { query: picked.query });
+        }
+        if (picked.poolUsedStaleFallback) {
+          await log("warn", "Candidate pool stale fallback used", { reason: picked.poolFallbackReason });
+        }
+      } catch (pickErr) {
+        const pickCode = classifyError(pickErr) === "no_candidates" ? "no_candidates" : classifyError(pickErr);
+        daily.lastApiError = pickCode;
+        await log("warn", "Auto-next pick failed after solve", { code: pickCode, trigger });
+      }
+
       recomputeStreak(daily, todayDateKST);
       await setDailyState(daily);
       await setBadge(daily);
       autoRetryAttempt = 0;
-      clearAutoTimer();
-      await log("info", "Solved check success -> DONE", { trigger });
-      return { ok: true, solved: true };
+      maybeScheduleAutoRecheck(settings, daily);
+      await log("info", "Solved check success -> auto-next", {
+        trigger,
+        solvedProblemId,
+        nextProblemId: daily.todayProblemId
+      });
+      return { ok: true, solved: true, autoAdvanced: Boolean(daily.todayProblemId && daily.todayProblemId !== solvedProblemId) };
     }
 
+    daily.currentProblemSolved = false;
     daily.lastApiError = "";
     await setDailyState(daily);
     await setBadge(daily);
@@ -377,12 +438,10 @@ async function rerollToday() {
   if (daily.rerollUsed >= settings.rerollLimitPerDay) throw new Error("reroll_limit");
   daily.rerollUsed += 1;
 
-  const picked = await pickProblem(settings, daily, todayDateKST, daily.rerollUsed);
-  daily.todayProblemId = picked.problemId;
-  daily.todayProblemLevel = picked.level;
-  daily.todayProblemTitleKo = picked.titleKo;
-  daily.todayProblemTitleEn = picked.titleEn;
-  daily.pickedFromQuery = picked.query;
+  const picked = await pickProblem(settings, daily, todayDateKST, {
+    rerollUsed: daily.rerollUsed
+  });
+  applyPickedProblem(daily, picked);
   daily.lastApiError = "";
   if (picked.poolPartialFailure) {
     await log("warn", "Candidate pool fetched with partial failure", { query: picked.query });
@@ -426,7 +485,7 @@ async function enforceTab(tabId, url) {
   const { settings, daily } = await ensureDailyState();
   if (!url || isSkippableUrl(url)) return;
   if (isEmergencyActive(daily)) return;
-  if (daily.solved) return;
+  if (isDayCompleted(daily)) return;
   if (!settings.handle || !daily.todayProblemId) return;
   if (isTodayProblemUrl(url, daily.todayProblemId)) return;
   if (isWhitelisted(url, settings.whitelist)) return;
@@ -442,7 +501,7 @@ async function enforceTab(tabId, url) {
 async function maybeOpenProblemOnStartup() {
   const { daily } = await ensureDailyState();
   if (!daily.todayProblemId) return;
-  if (daily.solved || isEmergencyActive(daily)) return;
+  if (isDayCompleted(daily) || isEmergencyActive(daily)) return;
   const target = getTodayProblemUrl(daily.todayProblemId);
   const tabs = await chrome.tabs.query({});
   if (tabs.some((t) => t.url && t.url.startsWith(target))) return;
@@ -453,7 +512,7 @@ async function maybeOpenProblemOnNewTab(tab) {
   if (tab?.id === undefined) return;
   const { daily } = await ensureDailyState();
   if (!daily.todayProblemId) return;
-  if (daily.solved || isEmergencyActive(daily)) return;
+  if (isDayCompleted(daily) || isEmergencyActive(daily)) return;
   const pending = tab.pendingUrl || tab.url || "";
   const looksLikeBlank = pending === "" || pending.startsWith("chrome://newtab");
   if (!looksLikeBlank) return;
@@ -469,6 +528,8 @@ async function buildSnapshot() {
     daily,
     todayDateKST,
     status: getStatus(daily),
+    dayCompleted: isDayCompleted(daily),
+    currentProblemStatus: daily.currentProblemSolved ? "DONE" : "PENDING",
     problemUrl: daily.todayProblemId ? getTodayProblemUrl(daily.todayProblemId) : "",
     problemLevel: daily.todayProblemLevel,
     problemTitle:
@@ -486,19 +547,17 @@ async function buildSnapshot() {
 async function resetToday() {
   const { settings, daily, todayDateKST } = await ensureDailyState();
   daily.dateKST = todayDateKST;
-  daily.solved = false;
+  setDayCompleted(daily, false);
+  daily.currentProblemSolved = false;
+  daily.autoAdvanceUsed = 0;
   daily.rerollUsed = 0;
   daily.lastSolvedCheckAt = 0;
   daily.lastApiError = "";
   if (daily.emergencyUntil <= now()) daily.emergencyUntil = 0;
 
   if (settings.handle) {
-    const picked = await pickProblem(settings, daily, todayDateKST, 0);
-    daily.todayProblemId = picked.problemId;
-    daily.todayProblemLevel = picked.level;
-    daily.todayProblemTitleKo = picked.titleKo;
-    daily.todayProblemTitleEn = picked.titleEn;
-    daily.pickedFromQuery = picked.query;
+    const picked = await pickProblem(settings, daily, todayDateKST, { rerollUsed: 0, autoAdvanceUsed: 0 });
+    applyPickedProblem(daily, picked);
     if (picked.poolPartialFailure) {
       await log("warn", "Candidate pool fetched with partial failure", { query: picked.query });
     }
@@ -511,6 +570,7 @@ async function resetToday() {
     daily.todayProblemTitleKo = "";
     daily.todayProblemTitleEn = "";
     daily.pickedFromQuery = "";
+    daily.currentProblemSolved = false;
     daily.candidatePoolKey = "";
     daily.candidatePoolUpdatedAt = 0;
     daily.candidatePool = [];
