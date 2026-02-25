@@ -1,14 +1,14 @@
 :root{
-  --bg: #0b0c10;
+  --bg: #101115;
   --card: rgba(255,255,255,.06);
   --cardTo: rgba(255,255,255,.04);
   --text: rgba(255,255,255,.92);
   --muted: rgba(255,255,255,.65);
   --border: rgba(255,255,255,.10);
-  --focus: rgba(120,80,255,.55);
+  --focus: rgba(178,166,220,.34);
   --fieldBg: rgba(255,255,255,.06);
   --fieldText: rgba(255,255,255,.92);
-  --selectOptionBg: #1a1c23;
+  --selectOptionBg: #1b1d24;
   --selectOptionText: #f4f6ff;
   --alertBg: rgba(255, 99, 71, 0.18);
   --alertBorder: rgba(255, 99, 71, 0.55);
@@ -22,51 +22,161 @@
 
   --btn: rgba(255,255,255,.10);
   --btnHover: rgba(255,255,255,.16);
+  --popup-card-border: rgba(255,255,255,.14);
+  --popup-card-bg:
+    radial-gradient(900px 300px at 12% -12%, rgba(129,112,172,.17), transparent 72%),
+    radial-gradient(900px 320px at 92% 8%, rgba(102,142,158,.13), transparent 74%),
+    linear-gradient(180deg, rgba(30,31,40,.94), rgba(18,20,28,.96));
+  --popup-title: var(--text);
+  --popup-icon-border: rgba(255,255,255,.18);
+  --popup-icon-bg: rgba(255,255,255,.09);
+  --popup-icon-bg-hover: rgba(255,255,255,.14);
+  --popup-today-border: rgba(255,255,255,.13);
+  --popup-today-bg: linear-gradient(180deg, rgba(49,52,70,.74), rgba(33,35,49,.78));
+  --popup-divider: rgba(255,255,255,.12);
+  --popup-open-bg: linear-gradient(90deg, rgba(136,143,175,.26), rgba(122,138,168,.22));
+  --popup-open-border: rgba(188,194,224,.30);
+  --popup-check-bg: linear-gradient(90deg, rgba(153,76,97,.56), rgba(134,67,89,.58));
+  --popup-check-border: rgba(215,140,159,.45);
+  --popup-check-shadow: 0 8px 20px rgba(90,42,56,.26);
+  --popup-change-header: rgba(255,255,255,.88);
+  --popup-change-caret: rgba(255,255,255,.62);
+  --popup-help-border: rgba(255,255,255,.18);
+  --popup-help-bg: rgba(255,255,255,.07);
+  --popup-help-text: rgba(255,255,255,.76);
+  --popup-change-panel-border: rgba(255,255,255,.13);
+  --popup-change-panel-bg: rgba(34,37,52,.66);
+  --popup-change-btn-bg: rgba(255,255,255,.06);
+  --popup-change-btn-border: rgba(255,255,255,.16);
+  --popup-change-btn-active-bg: linear-gradient(90deg, rgba(130,137,178,.33), rgba(125,140,181,.29));
+  --popup-change-btn-active-border: rgba(188,194,224,.34);
+  --popup-status-chip-border: rgba(255,255,255,.22);
+  --popup-status-chip-text: rgba(255,255,255,.92);
+  --popup-status-pending-bg: rgba(212,76,84,.19);
+  --popup-status-pending-border: rgba(212,76,84,.38);
+  --popup-status-done-bg: rgba(98,168,78,.21);
+  --popup-status-done-border: rgba(98,168,78,.42);
+  --popup-status-emergency-bg: rgba(204,155,66,.20);
+  --popup-status-emergency-border: rgba(204,155,66,.40);
+  --popup-lastcheck: rgba(255,255,255,.67);
+  --popup-emergency: rgba(255,90,118,.88);
+  --popup-emergency-locked: rgba(255,90,118,.45);
+  --popup-emergency-active: rgba(255,158,86,.92);
   --pageBg:
-    radial-gradient(1200px 600px at 15% -10%, rgba(120,80,255,.28), transparent 60%),
-    radial-gradient(900px 500px at 95% 10%, rgba(80,200,255,.22), transparent 55%),
+    radial-gradient(1200px 620px at 18% -12%, rgba(124,111,157,.17), transparent 62%),
+    radial-gradient(1000px 540px at 92% 8%, rgba(99,138,151,.13), transparent 64%),
     var(--bg);
   color-scheme: dark;
 }
 
 :root[data-theme="dark"]{
-  --bg: #111316;
-  --card: rgba(255,255,255,.04);
-  --cardTo: rgba(255,255,255,.02);
-  --text: rgba(255,255,255,.92);
+  --bg: #111112;
+  --card: rgba(255,255,255,.05);
+  --cardTo: rgba(255,255,255,.03);
+  --text: rgba(255,255,255,.95);
   --muted: rgba(255,255,255,.62);
   --border: rgba(255,255,255,.12);
-  --focus: rgba(90,160,255,.6);
-  --fieldBg: rgba(255,255,255,.06);
-  --fieldText: rgba(255,255,255,.94);
-  --selectOptionBg: #161a20;
-  --selectOptionText: #f5f8ff;
+  --focus: rgba(255,255,255,.45);
+  --fieldBg: rgba(255,255,255,.07);
+  --fieldText: rgba(255,255,255,.96);
+  --selectOptionBg: #131313;
+  --selectOptionText: #f2f2f2;
+  --popup-card-border: rgba(255,255,255,.12);
+  --popup-card-bg: linear-gradient(180deg, rgba(35,35,36,.95), rgba(23,23,24,.96));
+  --popup-title: var(--text);
+  --popup-icon-border: rgba(255,255,255,.18);
+  --popup-icon-bg: rgba(255,255,255,.07);
+  --popup-icon-bg-hover: rgba(255,255,255,.11);
+  --popup-today-border: rgba(255,255,255,.13);
+  --popup-today-bg: linear-gradient(180deg, rgba(39,39,40,.92), rgba(28,28,29,.93));
+  --popup-divider: rgba(255,255,255,.11);
+  --popup-open-bg: linear-gradient(90deg, rgba(255,255,255,.11), rgba(255,255,255,.07));
+  --popup-open-border: rgba(255,255,255,.20);
+  --popup-check-bg: linear-gradient(90deg, rgba(147,80,96,.55), rgba(132,72,89,.56));
+  --popup-check-border: rgba(203,142,156,.42);
+  --popup-check-shadow: 0 8px 16px rgba(80,46,56,.22);
+  --popup-change-header: rgba(255,255,255,.92);
+  --popup-change-caret: rgba(255,255,255,.62);
+  --popup-help-border: rgba(255,255,255,.18);
+  --popup-help-bg: rgba(255,255,255,.06);
+  --popup-help-text: rgba(255,255,255,.84);
+  --popup-change-panel-border: rgba(255,255,255,.13);
+  --popup-change-panel-bg: rgba(29,29,30,.93);
+  --popup-change-btn-bg: rgba(255,255,255,.06);
+  --popup-change-btn-border: rgba(255,255,255,.17);
+  --popup-change-btn-active-bg: linear-gradient(90deg, rgba(255,255,255,.13), rgba(255,255,255,.09));
+  --popup-change-btn-active-border: rgba(255,255,255,.23);
+  --popup-status-chip-border: rgba(255,255,255,.22);
+  --popup-status-chip-text: rgba(255,255,255,.96);
+  --popup-status-pending-bg: rgba(201,82,89,.21);
+  --popup-status-pending-border: rgba(201,82,89,.38);
+  --popup-status-done-bg: rgba(101,164,82,.21);
+  --popup-status-done-border: rgba(101,164,82,.40);
+  --popup-status-emergency-bg: rgba(198,153,72,.21);
+  --popup-status-emergency-border: rgba(198,153,72,.40);
+  --popup-lastcheck: rgba(255,255,255,.68);
+  --popup-emergency: rgba(255,105,132,.90);
+  --popup-emergency-locked: rgba(255,105,132,.48);
+  --popup-emergency-active: rgba(255,174,104,.94);
   --pageBg:
-    radial-gradient(1000px 500px at 20% -10%, rgba(80,130,255,.16), transparent 65%),
-    radial-gradient(1000px 500px at 90% 0%, rgba(60,200,170,.10), transparent 65%),
-    var(--bg);
+    radial-gradient(900px 420px at 24% -18%, rgba(255,255,255,.03), transparent 62%),
+    linear-gradient(180deg, #1a1a1b, #111112);
   color-scheme: dark;
 }
 
 :root[data-theme="light"]{
-  --bg: #f2f4f7;
-  --card: rgba(255,255,255,.92);
-  --cardTo: rgba(255,255,255,.85);
-  --text: rgba(13,18,28,.92);
-  --muted: rgba(13,18,28,.62);
-  --border: rgba(13,18,28,.16);
-  --focus: rgba(0,107,255,.55);
-  --fieldBg: rgba(255,255,255,.96);
-  --fieldText: rgba(13,18,28,.94);
+  --bg: #ffffff;
+  --card: rgba(255,255,255,1);
+  --cardTo: rgba(255,255,255,1);
+  --text: rgba(12,12,12,.95);
+  --muted: rgba(12,12,12,.62);
+  --border: rgba(0,0,0,.14);
+  --focus: rgba(0,0,0,.35);
+  --fieldBg: rgba(255,255,255,1);
+  --fieldText: rgba(12,12,12,.95);
   --selectOptionBg: #ffffff;
-  --selectOptionText: #0f1726;
+  --selectOptionText: #111111;
   --alertBg: rgba(255, 99, 71, 0.14);
   --alertBorder: rgba(255, 99, 71, 0.45);
-  --alertText: rgba(13,18,28,.95);
-  --pageBg:
-    radial-gradient(1000px 500px at 0% -20%, rgba(79,127,255,.18), transparent 60%),
-    radial-gradient(1000px 500px at 100% -10%, rgba(50,220,200,.14), transparent 60%),
-    var(--bg);
+  --alertText: rgba(12,12,12,.95);
+  --popup-card-border: rgba(0,0,0,.16);
+  --popup-card-bg: linear-gradient(180deg, rgba(255,255,255,1), rgba(255,255,255,1));
+  --popup-title: rgba(10,10,10,.95);
+  --popup-icon-border: rgba(0,0,0,.16);
+  --popup-icon-bg: rgba(0,0,0,.05);
+  --popup-icon-bg-hover: rgba(0,0,0,.10);
+  --popup-today-border: rgba(0,0,0,.16);
+  --popup-today-bg: linear-gradient(180deg, rgba(255,255,255,1), rgba(255,255,255,1));
+  --popup-divider: rgba(0,0,0,.14);
+  --popup-open-bg: linear-gradient(90deg, rgba(0,0,0,.12), rgba(0,0,0,.08));
+  --popup-open-border: rgba(0,0,0,.28);
+  --popup-check-bg: linear-gradient(90deg, rgba(205,96,122,.32), rgba(191,90,111,.34));
+  --popup-check-border: rgba(170,64,92,.46);
+  --popup-check-shadow: 0 8px 18px rgba(128,57,78,.14);
+  --popup-change-header: rgba(12,12,12,.92);
+  --popup-change-caret: rgba(12,12,12,.56);
+  --popup-help-border: rgba(0,0,0,.18);
+  --popup-help-bg: rgba(0,0,0,.04);
+  --popup-help-text: rgba(12,12,12,.72);
+  --popup-change-panel-border: rgba(0,0,0,.16);
+  --popup-change-panel-bg: rgba(255,255,255,1);
+  --popup-change-btn-bg: rgba(0,0,0,.06);
+  --popup-change-btn-border: rgba(0,0,0,.18);
+  --popup-change-btn-active-bg: linear-gradient(90deg, rgba(0,0,0,.14), rgba(0,0,0,.10));
+  --popup-change-btn-active-border: rgba(0,0,0,.28);
+  --popup-status-chip-border: rgba(0,0,0,.20);
+  --popup-status-chip-text: rgba(12,12,12,.95);
+  --popup-status-pending-bg: rgba(245,34,45,.14);
+  --popup-status-pending-border: rgba(196,43,58,.42);
+  --popup-status-done-bg: rgba(82,196,26,.16);
+  --popup-status-done-border: rgba(77,156,44,.40);
+  --popup-status-emergency-bg: rgba(250,173,20,.16);
+  --popup-status-emergency-border: rgba(185,130,20,.42);
+  --popup-lastcheck: rgba(12,12,12,.66);
+  --popup-emergency: rgba(189,66,96,.92);
+  --popup-emergency-locked: rgba(189,66,96,.48);
+  --popup-emergency-active: rgba(201,118,46,.92);
+  --pageBg: #ffffff;
   color-scheme: light;
 }
 
@@ -220,15 +330,16 @@ select.field option{
 }
 
 .popupRoot{
-  width: 430px;
-  max-width: 430px;
-  padding: 8px;
+  width: 100%;
+  max-width: 100%;
+  padding: 6px;
 }
 
 .popupBody{
+  width: 360px;
+  min-width: 360px;
   border-radius: 14px;
   overflow: hidden;
-  min-width: 430px;
 }
 
 .compactPopup{
@@ -326,4 +437,360 @@ select.field option{
 
 .mono{
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* Popup: loop-focused layout */
+.forcerPopup{
+  width: 100%;
+  max-width: 100%;
+  padding: 6px;
+}
+
+.forcerPopup .forcerCard{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 14px;
+  border-color: var(--popup-card-border);
+  background: var(--popup-card-bg);
+}
+
+.forcerPopup .topBar{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.forcerPopup .topTitle{
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  color: var(--popup-title);
+}
+
+.forcerPopup .iconBtn{
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid var(--popup-icon-border);
+  background: var(--popup-icon-bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background .15s ease, transform .03s ease;
+}
+
+.forcerPopup .iconBtn:hover{
+  background: var(--popup-icon-bg-hover);
+}
+
+.forcerPopup .iconBtn:active{
+  transform: translateY(1px);
+}
+
+.forcerPopup .iconBtn img{
+  width: 16px;
+  height: 16px;
+  opacity: .84;
+}
+
+.forcerPopup .todayBlock{
+  border: 1px solid var(--popup-today-border);
+  border-radius: 14px;
+  background: var(--popup-today-bg);
+  padding: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.forcerPopup .todayHeaderRow{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.forcerPopup .sectionTitle{
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--popup-title);
+}
+
+.forcerPopup .problemLine{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  border-top: 1px solid var(--popup-divider);
+  padding-top: 6px;
+}
+
+.forcerPopup .problemId{
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -.2px;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+
+.forcerPopup .problemTitleOneLine{
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  color: var(--popup-title);
+}
+
+.forcerPopup .tierBadgeIcon{
+  width: 17px;
+  height: 17px;
+  object-fit: contain;
+  flex: 0 0 17px;
+}
+
+.forcerPopup .statusBadge{
+  width: auto;
+  border-radius: 999px;
+  padding: 2px 7px;
+  font-size: 9px;
+  font-weight: 800;
+  border: 1px solid var(--popup-status-chip-border);
+  color: var(--popup-status-chip-text);
+  letter-spacing: .3px;
+}
+
+.forcerPopup .statusBadge.isPending{
+  background: var(--popup-status-pending-bg);
+  border-color: var(--popup-status-pending-border);
+}
+
+.forcerPopup .statusBadge.isDone{
+  background: var(--popup-status-done-bg);
+  border-color: var(--popup-status-done-border);
+}
+
+.forcerPopup .statusBadge.isEmergency{
+  background: var(--popup-status-emergency-bg);
+  border-color: var(--popup-status-emergency-border);
+}
+
+.forcerPopup .openProblemBtn{
+  background: var(--popup-open-bg);
+  border-color: var(--popup-open-border);
+  font-size: 15px;
+  font-weight: 700;
+  padding: 9px 12px;
+}
+
+.forcerPopup .completionBtn{
+  background: var(--popup-check-bg);
+  border-color: var(--popup-check-border);
+  box-shadow: var(--popup-check-shadow);
+  font-size: 16px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+}
+
+.forcerPopup .completionBtn > span{
+  display: block;
+  text-align: center;
+}
+
+.forcerPopup .completionBtn::after{
+  content: "";
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.forcerPopup .fireIcon{
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  object-fit: contain;
+}
+
+.forcerPopup .changeBlock{
+  border-top: 1px solid var(--popup-divider);
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.forcerPopup .changeHeaderRow{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.forcerPopup .changeToggleBtn{
+  flex: 1;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--popup-change-header);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.forcerPopup .changeCaret{
+  color: var(--popup-change-caret);
+  width: 12px;
+  text-align: center;
+}
+
+.forcerPopup .changeHelpBtn{
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--popup-help-border);
+  background: var(--popup-help-bg);
+  color: var(--popup-help-text);
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.forcerPopup .changePanel{
+  border: 1px solid var(--popup-change-panel-border);
+  border-radius: 12px;
+  background: var(--popup-change-panel-bg);
+  padding: 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  max-height: 132px;
+  opacity: 1;
+  transform: translateY(0);
+  overflow: hidden;
+  transition: max-height .22s ease, opacity .18s ease, transform .18s ease, padding .18s ease, border-color .18s ease;
+}
+
+.forcerPopup .changePanel.isCollapsed{
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-4px);
+  padding-top: 0;
+  padding-bottom: 0;
+  border-color: transparent;
+  pointer-events: none;
+}
+
+.forcerPopup .changeModeRow{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.forcerPopup .changeModeBtn{
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--popup-change-btn-bg);
+  border-color: var(--popup-change-btn-border);
+  padding: 8px 10px;
+}
+
+.forcerPopup .changeModeBtn.isActive{
+  background: var(--popup-change-btn-active-bg);
+  border-color: var(--popup-change-btn-active-border);
+}
+
+.forcerPopup .numberEntryRow{
+  display: grid;
+  grid-template-columns: 7fr 3fr;
+  gap: 7px;
+}
+
+.forcerPopup .numberEntryRow.isHidden{
+  display: none;
+}
+
+.forcerPopup .numberInput{
+  font-size: 13px;
+}
+
+.forcerPopup .applyBtn{
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 10px;
+}
+
+.forcerPopup .lastCheckText{
+  margin: 0;
+  color: var(--popup-lastcheck);
+  font-size: 10px;
+}
+
+.forcerPopup .statBar{
+  border-top: 1px solid var(--popup-divider);
+  border-bottom: 1px solid var(--popup-divider);
+  padding: 6px 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.forcerPopup .statCell{
+  padding: 0 6px;
+}
+
+.forcerPopup .statCell:not(:first-child){
+  border-left: 1px solid var(--popup-divider);
+}
+
+.forcerPopup .statKey{
+  font-size: 9px;
+  color: var(--muted);
+}
+
+.forcerPopup .statValue{
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.forcerPopup .errorHint{
+  min-height: 14px;
+  font-size: 10px;
+}
+
+.forcerPopup .emergencyTextBtn{
+  border: 0;
+  background: transparent;
+  color: var(--popup-emergency);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 0 0;
+}
+
+.forcerPopup .emergencyTextBtn.isLocked{
+  color: var(--popup-emergency-locked);
+  cursor: not-allowed;
+}
+
+.forcerPopup .emergencyTextBtn.isActive{
+  color: var(--popup-emergency-active);
 }

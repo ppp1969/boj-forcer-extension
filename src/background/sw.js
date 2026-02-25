@@ -13,7 +13,14 @@ import {
   pushRecentLog
 } from "../shared/storage.js";
 import { buildProblemQuery, pickDeterministicProblemId, getTodayProblemUrl, isTodayProblemUrl } from "../shared/picker.js";
-import { searchProblem, extractProblemCandidates, checkSolved, checkHandle, classifyError } from "../shared/solvedac-api.js";
+import {
+  searchProblem,
+  extractProblemCandidates,
+  checkSolved,
+  checkHandle,
+  classifyError,
+  getProblemById
+} from "../shared/solvedac-api.js";
 
 const NORMAL_REDIRECT_COOLDOWN_MS = 1200;
 const DEBUG_REDIRECT_COOLDOWN_MS = 350;
@@ -240,6 +247,15 @@ function applyPickedProblem(dailyState, picked) {
   dailyState.todayProblemTitleEn = picked.titleEn;
   dailyState.pickedFromQuery = picked.query;
   dailyState.currentProblemSolved = false;
+}
+
+function getEnglishTitleFromTitles(titles) {
+  const list = Array.isArray(titles) ? titles : [];
+  const en = list.find((row) => row?.language === "en" && row?.title);
+  if (en?.title) return String(en.title);
+  const first = list.find((row) => row?.title);
+  if (first?.title) return String(first.title);
+  return "";
 }
 
 function createFreshDaily(dateKST, prev) {
@@ -631,6 +647,40 @@ async function resetToday() {
   return daily;
 }
 
+async function changeTodayProblemByNumber(rawProblemId) {
+  const { settings, daily } = await ensureDailyState();
+  if (!settings.handle) throw new Error("missing_handle");
+  const problemId = Number(rawProblemId);
+  if (!Number.isInteger(problemId) || problemId <= 0) throw new Error("invalid_problem_id");
+  if (daily.rerollUsed >= settings.rerollLimitPerDay) throw new Error("reroll_limit");
+
+  try {
+    const problem = await getProblemById(problemId);
+    const resolvedProblemId = Number(problem?.problemId || problemId);
+    if (!Number.isInteger(resolvedProblemId) || resolvedProblemId <= 0) throw new Error("problem_not_found");
+
+    daily.rerollUsed += 1;
+    daily.todayProblemId = resolvedProblemId;
+    daily.todayProblemLevel = Number(problem?.level || 0);
+    daily.todayProblemTitleKo = String(problem?.titleKo || "");
+    daily.todayProblemTitleEn = getEnglishTitleFromTitles(problem?.titles);
+    daily.pickedFromQuery = `id:${resolvedProblemId}`;
+    daily.currentProblemSolved = false;
+    daily.lastApiError = "";
+
+    autoRetryAttempt = 0;
+    await setDailyState(daily);
+    await setBadge(daily);
+    syncRecheckSchedulers(settings, daily);
+    return daily;
+  } catch (err) {
+    const code = classifyError(err);
+    if (code === "not_found") throw new Error("problem_not_found");
+    if (code === "http_error") throw new Error("problem_not_found");
+    throw new Error(code || "unknown");
+  }
+}
+
 async function factoryReset() {
   await chrome.storage.sync.clear();
   await chrome.storage.local.clear();
@@ -697,6 +747,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     }
     if (type === "REROLL") {
       await rerollToday();
+      return { ok: true, snapshot: await buildSnapshot() };
+    }
+    if (type === "CHANGE_TODAY_PROBLEM_BY_NUMBER") {
+      await changeTodayProblemByNumber(message.problemId);
       return { ok: true, snapshot: await buildSnapshot() };
     }
     if (type === "TOGGLE_EMERGENCY") {

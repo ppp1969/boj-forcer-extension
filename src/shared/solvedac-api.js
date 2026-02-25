@@ -85,3 +85,7 @@ export async function checkSolved(handle, problemId) {
 export async function checkHandle(handle) {
   return apiGet("/user/show", { handle });
 }
+
+export async function getProblemById(problemId) {
+  return apiGet("/problem/show", { problemId: Number(problemId) || 0 });
+}
