@@ -24,17 +24,20 @@
         <button id="btnOpenToday" class="btn">Open Problem</button>
 
         <div class="row" style="justify-content: space-between">
-          <p id="txtRerollRemaining" class="h2">Reroll Remaining</p>
+          <p id="txtRerollRemaining" class="h2">Today Change</p>
           <p id="rerollCount" class="h2 mono">0 / 0</p>
         </div>
         <div class="progress">
           <div id="rerollBar" class="progressFill"></div>
         </div>
 
-        <div class="btnRow compactRow">
-          <button id="btnReroll" class="btn">Reroll</button>
-          <button id="btnRecheck" class="btn">Check</button>
+        <div class="row">
+          <button id="btnReroll" class="btn">Random Pick</button>
+          <button id="btnSetNumber" class="btn">Pick Number</button>
+          <button id="btnChangeHelp" class="btn" style="max-width: 46px">?</button>
         </div>
+        <input id="inputProblemNumber" class="field mono" placeholder="e.g. 1000" inputmode="numeric" />
+        <button id="btnRecheck" class="btn">Check</button>
 
         <button id="btnEmergencyToggle" class="btn emergencyBtn">Emergency</button>
 

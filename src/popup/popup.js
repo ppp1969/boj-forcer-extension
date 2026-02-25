@@ -5,8 +5,12 @@ const $ = (id) => document.getElementById(id);
 const I18N = {
   en: {
     title: "BOJ Forcer",
-    rerollRemaining: "Reroll Remaining",
-    reroll: "Reroll",
+    rerollRemaining: "Today Change",
+    reroll: "Random Pick",
+    numberPick: "Pick Number",
+    numberHint: "e.g. 1000",
+    changeHelpText:
+      "Random Pick uses your current filters. Pick Number sets today's problem directly by BOJ number. Both share the same daily change count.",
     recheck: "Check",
     openProblem: "Open Problem",
     settings: "Settings",
@@ -23,7 +27,9 @@ const I18N = {
     bannerMissingHandle: "Set nickname in Settings first.",
     err_missing_handle: "Set your nickname first.",
     err_no_candidates: "No candidates. Relax filters.",
-    err_reroll_limit: "Reroll limit reached.",
+    err_reroll_limit: "Today change limit reached.",
+    err_invalid_problem_id: "Enter a valid problem number.",
+    err_problem_not_found: "Problem not found.",
     err_rate_limited: "Rate limited by solved.ac.",
     err_server_error: "solved.ac server error.",
     err_offline_or_cors: "Network error.",
@@ -32,8 +38,12 @@ const I18N = {
   },
   ko: {
     title: "BOJ Forcer",
-    rerollRemaining: "남은 리롤",
-    reroll: "리롤",
+    rerollRemaining: "오늘 문제 변경",
+    reroll: "랜덤뽑기",
+    numberPick: "번호 지정",
+    numberHint: "예: 1000",
+    changeHelpText:
+      "랜덤뽑기는 현재 필터 기준으로 문제를 바꿉니다. 번호 지정은 BOJ 번호로 오늘 문제를 직접 바꿉니다. 두 방식 모두 같은 일일 변경 횟수를 사용합니다.",
     recheck: "검사",
     openProblem: "문제 열기",
     settings: "설정",
@@ -50,7 +60,9 @@ const I18N = {
     bannerMissingHandle: "설정에서 닉네임을 먼저 입력하세요.",
     err_missing_handle: "닉네임을 먼저 입력하세요.",
     err_no_candidates: "후보 문제가 없습니다. 필터를 완화하세요.",
-    err_reroll_limit: "리롤 한도를 초과했습니다.",
+    err_reroll_limit: "오늘 변경 한도를 초과했습니다.",
+    err_invalid_problem_id: "유효한 문제 번호를 입력하세요.",
+    err_problem_not_found: "문제를 찾을 수 없습니다.",
     err_rate_limited: "solved.ac 요청 제한입니다.",
     err_server_error: "solved.ac 서버 오류입니다.",
     err_offline_or_cors: "네트워크 오류입니다.",
@@ -71,6 +83,9 @@ const els = {
   rerollCount: $("rerollCount"),
   rerollBar: $("rerollBar"),
   btnReroll: $("btnReroll"),
+  btnSetNumber: $("btnSetNumber"),
+  inputProblemNumber: $("inputProblemNumber"),
+  btnChangeHelp: $("btnChangeHelp"),
   btnRecheck: $("btnRecheck"),
   btnEmergencyToggle: $("btnEmergencyToggle"),
   txtStreak: $("txtStreak"),
@@ -135,6 +150,8 @@ function applyStaticText(locale) {
   els.txtTitle.textContent = t(locale, "title");
   els.txtRerollRemaining.textContent = t(locale, "rerollRemaining");
   els.btnReroll.textContent = t(locale, "reroll");
+  els.btnSetNumber.textContent = t(locale, "numberPick");
+  els.inputProblemNumber.placeholder = t(locale, "numberHint");
   els.btnRecheck.textContent = t(locale, "recheck");
   els.btnOpenToday.textContent = t(locale, "openProblem");
   els.btnOptions.textContent = t(locale, "settings");
@@ -193,11 +210,16 @@ function render(snapshot) {
   els.nicknameBanner.textContent = t(locale, "bannerMissingHandle");
 
   const rerollLimit = Number(settings.rerollLimitPerDay || 0);
-  const ratio = rerollLimit <= 0 ? 0 : (rerollRemaining / rerollLimit) * 100;
+  const changeUsed = Math.max(0, Number(daily.rerollUsed || 0));
+  const shownUsed = rerollLimit > 0 ? Math.min(rerollLimit, changeUsed) : changeUsed;
+  const ratio = rerollLimit <= 0 ? 0 : (shownUsed / rerollLimit) * 100;
   els.rerollBar.style.width = `${Math.max(0, Math.min(100, ratio))}%`;
-  els.rerollCount.textContent = `${rerollRemaining} / ${rerollLimit}`;
+  els.rerollCount.textContent = `${shownUsed} / ${rerollLimit}`;
 
-  els.btnReroll.disabled = rerollRemaining <= 0 || !daily.todayProblemId || recheckLoading;
+  const canChangeTodayProblem = rerollRemaining > 0 && Boolean(settings.handle);
+  els.btnReroll.disabled = !canChangeTodayProblem || recheckLoading;
+  els.btnSetNumber.disabled = !canChangeTodayProblem || recheckLoading;
+  els.inputProblemNumber.disabled = !canChangeTodayProblem || recheckLoading;
   els.btnRecheck.disabled = recheckLoading || !daily.todayProblemId;
   els.btnRecheck.classList.toggle("isLoading", recheckLoading);
   renderEmergencyButton(snapshot, locale);
@@ -255,6 +277,37 @@ els.btnReroll.addEventListener("click", async () => {
     const locale = latestSnapshot.settings.uiLanguage === "ko" ? "ko" : "en";
     els.errorText.textContent = localizeError(locale, String(err?.message || err));
   }
+});
+
+els.btnSetNumber.addEventListener("click", async () => {
+  const raw = String(els.inputProblemNumber.value || "").trim();
+  if (!raw) {
+    if (!latestSnapshot) return;
+    const locale = latestSnapshot.settings.uiLanguage === "ko" ? "ko" : "en";
+    els.errorText.textContent = localizeError(locale, "invalid_problem_id");
+    return;
+  }
+  try {
+    const res = await send("CHANGE_TODAY_PROBLEM_BY_NUMBER", { problemId: raw });
+    if (!res?.ok) throw new Error(res?.error || "change_problem_failed");
+    els.inputProblemNumber.value = "";
+    render(res.snapshot);
+  } catch (err) {
+    if (!latestSnapshot) return;
+    const locale = latestSnapshot.settings.uiLanguage === "ko" ? "ko" : "en";
+    els.errorText.textContent = localizeError(locale, String(err?.message || err));
+  }
+});
+
+els.inputProblemNumber.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  els.btnSetNumber.click();
+});
+
+els.btnChangeHelp.addEventListener("click", () => {
+  const locale = latestSnapshot?.settings?.uiLanguage === "ko" ? "ko" : "en";
+  window.alert(t(locale, "changeHelpText"));
 });
 
 els.btnEmergencyToggle.addEventListener("click", async () => {
