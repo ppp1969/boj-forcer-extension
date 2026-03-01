@@ -1,5 +1,14 @@
 const API_BASE = "https://solved.ac/api/v3";
 const DEFAULT_TIMEOUT_MS = 10000;
+const BOJ_STATUS_URL = "https://www.acmicpc.net/status";
+const BOJ_ACCEPTED_RESULT_ID = 4;
+const KST_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const kstDateFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Seoul",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit"
+});
 
 function normalizeTagKey(rawTag) {
   const tag = String(rawTag || "").trim().toLowerCase();
@@ -54,6 +63,31 @@ export async function apiGet(path, params = {}, timeoutMs = DEFAULT_TIMEOUT_MS) 
   }
 }
 
+async function fetchText(url, timeoutMs = DEFAULT_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      signal: controller.signal,
+      headers: {
+        Accept: "text/html"
+      }
+    });
+    if (!res.ok) {
+      const code = classifyHttpError(res.status);
+      throw {
+        code,
+        status: res.status,
+        message: `HTTP ${res.status}`
+      };
+    }
+    return await res.text();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function searchProblem(query, page = 1) {
   return apiGet("/search/problem", { query, page: Number(page) || 1 });
 }
@@ -87,6 +121,37 @@ export async function checkSolved(handle, problemId) {
   const query = `@${handle} id:${problemId}`;
   const data = await searchProblem(query, 1);
   return Number(data?.count || 0) > 0;
+}
+
+function extractLatestAcceptedTimestampSec(statusHtml) {
+  const match = String(statusHtml || "").match(/data-timestamp="(\d{9,})"/i);
+  if (!match?.[1]) return 0;
+  const tsSec = Number(match[1]);
+  if (!Number.isFinite(tsSec) || tsSec <= 0) return 0;
+  return Math.floor(tsSec);
+}
+
+function getKSTDateFromUnixSeconds(tsSec) {
+  return kstDateFormatter.format(new Date(tsSec * 1000));
+}
+
+export async function checkSolvedToday(handle, problemId, todayDateKST) {
+  const normalizedHandle = String(handle || "").trim();
+  const normalizedProblemId = Number(problemId);
+  if (!normalizedHandle) return false;
+  if (!Number.isInteger(normalizedProblemId) || normalizedProblemId <= 0) return false;
+  if (!KST_DATE_RE.test(String(todayDateKST || ""))) return false;
+
+  const url = new URL(BOJ_STATUS_URL);
+  url.searchParams.set("problem_id", String(normalizedProblemId));
+  url.searchParams.set("user_id", normalizedHandle);
+  url.searchParams.set("result_id", String(BOJ_ACCEPTED_RESULT_ID));
+
+  const statusHtml = await fetchText(url.toString());
+  const latestAcceptedTsSec = extractLatestAcceptedTimestampSec(statusHtml);
+  if (!latestAcceptedTsSec) return false;
+
+  return getKSTDateFromUnixSeconds(latestAcceptedTsSec) === todayDateKST;
 }
 
 export async function checkHandle(handle) {

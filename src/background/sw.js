@@ -16,7 +16,7 @@ import { buildProblemQuery, pickDeterministicProblemId, getTodayProblemUrl, isTo
 import {
   searchProblem,
   extractProblemCandidates,
-  checkSolved,
+  checkSolvedToday,
   checkHandle,
   classifyError,
   getProblemById
@@ -425,7 +425,7 @@ async function performSolvedCheck(trigger = "manual") {
     if (waitMs > 0) return { ok: false, reason: "too_recent", waitMs };
 
     const solvedProblemId = daily.todayProblemId;
-    const solved = await checkSolved(settings.handle, solvedProblemId);
+    const solved = await checkSolvedToday(settings.handle, solvedProblemId, todayDateKST);
     daily.lastSolvedCheckAt = now();
     if (solved) {
       setDayCompleted(daily, true);
