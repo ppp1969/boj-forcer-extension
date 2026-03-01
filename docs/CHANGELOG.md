@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1] - 2026-03-01
+- Fixed completion check to require an AC submission on BOJ status for the current KST date
+- Prevented previously solved problems from being counted as today's completion when selected by problem number
+- Kept same-day re-submission behavior valid: re-submitting a problem solved today still counts for 1 DAY 1 BOJ
+
 ## [1.1.0] - 2026-02-25
 - Added day-level completion split (`doneToday`) and preserved clear history while auto-advancing to the next random problem after solve
 - Upgraded Check flow: popup-open immediate check, active-state 1 minute polling, and 15 second duplicate check guard
